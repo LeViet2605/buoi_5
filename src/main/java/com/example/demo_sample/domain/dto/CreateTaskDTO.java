@@ -1,0 +1,60 @@
+package com.example.demo_sample.domain.dto;
+
+import lombok.Data;
+import org.springframework.util.StringUtils;
+
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
+
+@Data
+public class CreateTaskDTO {
+
+    private String requirementName;
+    private String assignee;
+    private String reviewer;
+    private Integer taskTypeId;
+    private LocalDate date;
+    private Double planFrom;
+    private Double planTo;
+
+    public Map<String, String> validate() {
+        Map<String, String> errors = new HashMap<>();
+
+        if (!StringUtils.hasText(requirementName)) {
+            errors.put("requirementName", "Requirement name không được để trống");
+        }
+
+        if (!StringUtils.hasText(assignee)) {
+            errors.put("assignee", "Assignee không được để trống");
+        }
+
+        if (!StringUtils.hasText(reviewer)) {
+            errors.put("reviewer", "Reviewer không được để trống");
+        }
+
+        if (taskTypeId == null || taskTypeId < 1 || taskTypeId > 4) {
+            errors.put("taskTypeId", "TaskTypeID phải từ 1 đến 4");
+        }
+
+        if (date == null) {
+            errors.put("date", "Date không được để trống");
+        }
+
+        if (planFrom == null) {
+            errors.put("planFrom", "PlanFrom không được để trống");
+        }
+
+        if (planTo == null) {
+            errors.put("planTo", "PlanTo không được để trống");
+        }
+
+        if (planFrom != null && planTo != null) {
+            if (planFrom < 8.0 || planTo > 17.5 || planFrom >= planTo) {
+                errors.put("time", "Thời gian phải nằm trong khoảng [8.0 - 17.5] và planFrom < planTo");
+            }
+        }
+
+        return errors;
+    }
+}
