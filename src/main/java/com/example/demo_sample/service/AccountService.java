@@ -3,6 +3,7 @@ package com.example.demo_sample.service;
 import com.example.demo_sample.domain.AccountEntity;
 import com.example.demo_sample.repository.AccountRepository;
 import com.example.demo_sample.JwtUtil;
+import com.example.demo_sample.util.TokenBlacklist;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -22,6 +23,7 @@ public class AccountService implements UserDetailsService {
     private final AccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final TokenBlacklist tokenBlacklist;
 
     @PostConstruct
     public void rehashPasswords() {
@@ -71,6 +73,14 @@ public class AccountService implements UserDetailsService {
             throw new IllegalArgumentException("Refresh Token không hợp lệ hoặc hết hạn");
         }
         return jwtUtil.generateAccessToken(username);
+    }
+
+    // --- Logout ---
+    public void logout(String token) {
+        if (token == null || token.isEmpty()) {
+            throw new IllegalArgumentException("Token không tồn tại");
+        }
+        tokenBlacklist.add(token);
     }
 
     public AccountEntity updateAccount(Long id, String email, String rawPassword) {

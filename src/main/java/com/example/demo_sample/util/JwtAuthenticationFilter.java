@@ -83,6 +83,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 sendError(response, "Token không hợp lệ hoặc đã hết hạn");
                 return;
             }
+
+
         }
 
         // 7) Tiếp tục filter chain

@@ -5,6 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.*;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 
 @RestController
@@ -45,6 +47,17 @@ public class AccountController {
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(401).body(new ErrorResponse(ex.getMessage()));
         }
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletRequest request) {
+        String header = request.getHeader("Authorization");
+        if (header != null && header.startsWith("Bearer ")) {
+            String token = header.substring(7);
+            accountService.logout(token);
+            return ResponseEntity.ok(Map.of("message", "Đăng xuất thành công"));
+        }
+        return ResponseEntity.badRequest().body(new ErrorResponse("Token không tồn tại hoặc sai định dạng"));
     }
 
     // DTO record
