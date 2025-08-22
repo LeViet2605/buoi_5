@@ -68,11 +68,25 @@ public class AccountService implements UserDetailsService {
         if (refreshToken == null || refreshToken.isEmpty()) {
             throw new IllegalArgumentException("Refresh Token không được để trống");
         }
-        String username = jwtUtil.extractUsername(refreshToken);
-        if (!jwtUtil.isTokenValid(refreshToken, username)) {
-            throw new IllegalArgumentException("Refresh Token không hợp lệ hoặc hết hạn");
+
+        // 1. Giải mã refresh token để lấy username
+        String username;
+        try {
+            username = jwtUtil.extractUsername(refreshToken);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Refresh Token không hợp lệ");
         }
-        return jwtUtil.generateAccessToken(username);
+
+        // 2. Kiểm tra refresh token hợp lệ (chưa hết hạn, subject đúng)
+        if (!jwtUtil.isTokenValid(refreshToken, username)) {
+            throw new IllegalArgumentException("Refresh Token không hợp lệ hoặc đã hết hạn");
+        }
+
+        // 3. Load lại user từ DB để chắc chắn user còn tồn tại
+        UserDetails userDetails = loadUserByUsername(username);
+
+        // 4. Sinh Access Token mới dựa trên username chuẩn trong DB
+        return jwtUtil.generateAccessToken(userDetails.getUsername());
     }
 
     // --- Logout ---

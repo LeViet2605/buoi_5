@@ -49,6 +49,7 @@ public class AccountController {
         }
     }
 
+
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletRequest request) {
         String header = request.getHeader("Authorization");

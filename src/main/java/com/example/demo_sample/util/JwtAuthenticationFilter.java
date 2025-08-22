@@ -26,32 +26,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        // 1) Bỏ qua: cho login/register đi thẳng
-        String path = request.getServletPath();
-        if (isPublic(path)) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         final String authHeader = request.getHeader("Authorization");
         String username = null;
         String jwt = null;
 
-        // 2) Thiếu hoặc sai định dạng token
+        // Nếu không có token -> bỏ qua, để Security xử lý permitAll
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            sendError(response, "Token không tồn tại hoặc sai định dạng");
+            filterChain.doFilter(request, response);
             return;
         }
 
         jwt = authHeader.substring(7);
 
-        // 3) Token bị blacklist
+        // 1) Token bị blacklist
         if (tokenBlacklist.contains(jwt)) {
             sendError(response, "Token đã bị vô hiệu hóa");
             return;
         }
 
-        // 4) Giải mã token lấy username
+        // 2) Giải mã token lấy username
         try {
             username = jwtUtil.extractUsername(jwt);
         } catch (Exception e) {
@@ -59,7 +52,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // 4) Nếu có username nhưng chưa xác thực
+        // 3) Nếu có username nhưng chưa xác thực
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails;
             try {
@@ -67,12 +60,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             } catch (UsernameNotFoundException e) {
                 sendError(response, "ID sai hoặc không tồn tại");
                 return;
-            } catch (Exception e) {
-                sendError(response, "Lỗi khi tải thông tin người dùng");
-                return;
             }
 
-            // 6) Xác thực token
+            // 4) Xác thực token
             if (jwtUtil.isTokenValid(jwt, userDetails.getUsername())) {
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
@@ -82,17 +72,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 sendError(response, "Token không hợp lệ hoặc đã hết hạn");
                 return;
             }
-
-
         }
 
-        // 7) Tiếp tục filter chain
         filterChain.doFilter(request, response);
-    }
-
-    private boolean isPublic(String path) {
-        String p = path != null ? path.replaceAll("/$", "") : "";
-        return p.equals("/api/account/login") || p.equals("/api/account/register");
     }
 
     private void sendError(HttpServletResponse response, String message) throws IOException {
