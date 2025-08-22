@@ -1,8 +1,11 @@
 package com.example.demo_sample.config;
 
+import com.example.demo_sample.domain.AccountEntity;
+import com.example.demo_sample.repository.AccountRepository;
 import com.example.demo_sample.util.JwtAuthenticationFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.*;
@@ -26,6 +29,7 @@ import java.util.Map;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
+    private final AccountRepository accountRepository;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -92,5 +96,20 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable());
 
         return http.build();
+    }
+
+    // 🔥 Tạo admin mặc định khi app khởi động
+    @Bean
+    public CommandLineRunner initAdmin(PasswordEncoder passwordEncoder) {
+        return args -> {
+            if (accountRepository.findByEmail("admin@gmail.com").isEmpty()) {
+                AccountEntity admin = new AccountEntity();
+                admin.setEmail("admin@gmail.com");
+                admin.setPassword(passwordEncoder.encode("123456")); // mật khẩu mặc định
+                admin.setRole("ROLE_ADMIN");
+                accountRepository.save(admin);
+                System.out.println("✅ Default admin created: admin@gmail.com / 123456");
+            }
+        };
     }
 }
