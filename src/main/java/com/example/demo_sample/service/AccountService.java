@@ -43,8 +43,10 @@ public class AccountService implements UserDetailsService {
         AccountEntity account = new AccountEntity();
         account.setEmail(email);
         account.setPassword(passwordEncoder.encode(rawPassword));
+        account.setRole("ROLE_USER"); // mặc định
         return accountRepository.save(account);
     }
+
 
     // --- Login ---
     public Map<String, String> login(String email, String rawPassword, AuthenticationManager authenticationManager) {
@@ -129,7 +131,8 @@ public class AccountService implements UserDetailsService {
         return new org.springframework.security.core.userdetails.User(
                 account.getEmail(),
                 account.getPassword(),
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
+                Collections.singletonList(new SimpleGrantedAuthority(account.getRole()))
         );
     }
+
 }

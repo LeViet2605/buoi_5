@@ -19,4 +19,7 @@ public class AccountEntity {
 
     @Column(nullable = false)
     private String password;
+
+    @Column(nullable = false)
+    private String role;  // ROLE_USER hoặc ROLE_ADMIN
 }
