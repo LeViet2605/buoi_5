@@ -47,7 +47,6 @@ public class AccountService implements UserDetailsService {
         return accountRepository.save(account);
     }
 
-
     // --- Login ---
     public Map<String, String> login(String email, String rawPassword, AuthenticationManager authenticationManager) {
         Authentication authentication = authenticationManager.authenticate(
@@ -71,7 +70,6 @@ public class AccountService implements UserDetailsService {
             throw new IllegalArgumentException("Refresh Token không được để trống");
         }
 
-        // 1. Giải mã refresh token để lấy username
         String username;
         try {
             username = jwtUtil.extractUsername(refreshToken);
@@ -79,15 +77,11 @@ public class AccountService implements UserDetailsService {
             throw new IllegalArgumentException("Refresh Token không hợp lệ");
         }
 
-        // 2. Kiểm tra refresh token hợp lệ (chưa hết hạn, subject đúng)
         if (!jwtUtil.isTokenValid(refreshToken, username)) {
             throw new IllegalArgumentException("Refresh Token không hợp lệ hoặc đã hết hạn");
         }
 
-        // 3. Load lại user từ DB để chắc chắn user còn tồn tại
         UserDetails userDetails = loadUserByUsername(username);
-
-        // 4. Sinh Access Token mới dựa trên username chuẩn trong DB
         return jwtUtil.generateAccessToken(userDetails.getUsername());
     }
 
@@ -99,6 +93,7 @@ public class AccountService implements UserDetailsService {
         tokenBlacklist.add(token);
     }
 
+    // --- Update ---
     public AccountEntity updateAccount(Long id, String email, String rawPassword) {
         AccountEntity account = accountRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
@@ -109,15 +104,21 @@ public class AccountService implements UserDetailsService {
         return accountRepository.save(account);
     }
 
+    // --- Delete ---
     public void deleteAccount(Long id) {
+        if (!accountRepository.existsById(id)) {
+            throw new RuntimeException("Không tìm thấy user");
+        }
         accountRepository.deleteById(id);
     }
 
+    // --- Get by ID ---
     public AccountEntity getAccount(Long id) {
         return accountRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
     }
 
+    // --- Get all ---
     public List<AccountEntity> getAllAccounts() {
         return accountRepository.findAll();
     }

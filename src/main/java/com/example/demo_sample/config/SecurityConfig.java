@@ -74,8 +74,7 @@ public class SecurityConfig {
                         // Cho phép tất cả đăng ký & login
                         .requestMatchers(HttpMethod.POST, "/api/account/register", "/api/account/login").permitAll()
 
-                        // Chỉ ADMIN được xem & xoá account
-                        .requestMatchers(HttpMethod.GET, "/api/account/**").hasRole("ADMIN")
+                        // Chỉ ADMIN được xoá account
                         .requestMatchers(HttpMethod.DELETE, "/api/account/**").hasRole("ADMIN")
 
                         // USER và ADMIN đều được xem/thêm task
