@@ -28,6 +28,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+
     private final JwtAuthenticationFilter jwtFilter;
     private final AccountRepository accountRepository;
 
