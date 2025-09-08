@@ -42,6 +42,7 @@ public class SecurityConfig {
         return configuration.getAuthenticationManager();
     }
 
+
     // Xử lý khi chưa xác thực (401)
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint() {
