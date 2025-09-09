@@ -9,6 +9,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -20,6 +22,7 @@ import java.util.Map;
 public class TaskController {
 
     //DI
+    public record ErrorResponse(String error) {}
     private final TaskService taskService;
     //Tạo bean
 
@@ -49,9 +52,28 @@ public class TaskController {
         return ResponseEntity.ok().body(null);
     }
 
-    @DeleteMapping("/{id}")
-    public void deleteTask(@PathVariable Integer id) {
+//    @DeleteMapping("/{id}")
+//    public void deleteTask(@PathVariable Integer id,  Authentication authentication) {
+//        taskService.delete(id);
+//    }
+
+     @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteTask(
+            @PathVariable Integer id,
+            Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(401).body(new ErrorResponse("Bạn chưa đăng nhập"));
+        }
+
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(role -> role.equals("ROLE_ADMIN"));
+
+        if (!isAdmin) {
+            return ResponseEntity.status(403).body(new ErrorResponse("Bạn không có quyền xóa task"));
+        }
         taskService.delete(id);
+        return ResponseEntity.ok(Map.of("message", "Xóa Task thành công"));
     }
 
     @GetMapping("")
