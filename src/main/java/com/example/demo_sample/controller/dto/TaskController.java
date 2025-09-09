@@ -57,6 +57,8 @@ public class TaskController {
 //        taskService.delete(id);
 //    }
 
+
+    //alo
      @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteTask(
             @PathVariable Integer id,
