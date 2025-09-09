@@ -58,7 +58,7 @@ public class TaskController {
 //    }
 
 
-    //alo
+
      @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteTask(
             @PathVariable Integer id,
