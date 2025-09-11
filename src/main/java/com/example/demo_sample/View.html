@@ -269,6 +269,12 @@
             alert(data.message);
             resetForm();
             loadTasks(currentPage);
+
+            // 🔥 Reload lại search nếu đang hiển thị đúng task vừa sửa
+            const searchId = document.getElementById("searchTaskId").value;
+            if (searchId && searchId == (id || data.taskId)) {
+                searchTask(searchId);
+            }
         } else {
             alert(JSON.stringify(data));
         }
@@ -285,7 +291,6 @@
         currentPage = data.number;
         totalPages = data.totalPages;
 
-        // render task list
         taskList.innerHTML = tasks.map(t => `
         <div class="task">
           <b>ID:</b> ${t.taskId}<br>
@@ -301,25 +306,17 @@
         </div>
       `).join("");
 
-        // render pagination
         renderPagination();
     }
 
     function renderPagination() {
         const pagination = document.getElementById("pagination");
         let buttons = "";
-
-        // Nút Previous
         buttons += `<button onclick="changePage(${currentPage - 1})" class="${currentPage === 0 ? 'disabled' : ''}">«</button>`;
-
-        // Nút số trang
         for (let i = 0; i < totalPages; i++) {
             buttons += `<button onclick="changePage(${i})" class="${i === currentPage ? 'active' : ''}">${i + 1}</button>`;
         }
-
-        // Nút Next
         buttons += `<button onclick="changePage(${currentPage + 1})" class="${currentPage === totalPages - 1 ? 'disabled' : ''}">»</button>`;
-
         pagination.innerHTML = buttons;
     }
 
@@ -345,7 +342,7 @@
         cancelEditBtn.classList.remove("hidden");
     }
 
-    async function deleteTask(id) {
+    async function deleteTask(id, fromSearch = false) {
         if (!confirm("Bạn có chắc muốn xóa task này?")) return;
         const res = await fetch(`${API_BASE}/tasks/${id}`, {
             method: "DELETE",
@@ -354,6 +351,9 @@
         if (res.ok) {
             alert("Xóa task thành công");
             loadTasks(currentPage);
+            if (fromSearch) {
+                document.getElementById("searchResult").innerHTML = "";
+            }
         } else {
             const data = await res.json();
             alert(data.error || "Xóa thất bại");
@@ -371,11 +371,13 @@
     document.getElementById("searchForm").addEventListener("submit", async (e) => {
         e.preventDefault();
         const id = document.getElementById("searchTaskId").value;
+        searchTask(id);
+    });
 
+    async function searchTask(id) {
         const res = await fetch(`${API_BASE}/tasks/search?id=${id}`, {
             headers: { "Authorization": `Bearer ${accessToken}` }
         });
-
         const container = document.getElementById("searchResult");
         if (res.ok) {
             const t = await res.json();
@@ -386,13 +388,17 @@
                   <b>Assignee:</b> ${t.assignee}<br>
                   <b>Reviewer:</b> ${t.reviewer}<br>
                   <b>Date:</b> ${t.date}<br>
-                  <b>Plan:</b> ${t.planFrom} - ${t.planTo}
+                  <b>Plan:</b> ${t.planFrom} - ${t.planTo}<br>
+                  <div class="task-actions">
+                    <button onclick="editTask(${t.taskId})">✏️ Sửa</button>
+                    <button onclick="deleteTask(${t.taskId}, true)">🗑️ Xóa</button>
+                  </div>
                 </div>
             `;
         } else {
             container.innerHTML = `<p style="color:red;">Không tìm thấy Task với ID ${id}</p>`;
         }
-    });
+    }
 </script>
 </body>
 </html>
