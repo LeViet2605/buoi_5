@@ -107,10 +107,10 @@ public class SecurityConfig {
             if (accountRepository.findByEmail("admin@gmail.com").isEmpty()) {
                 AccountEntity admin = new AccountEntity();
                 admin.setEmail("admin@gmail.com");
-                admin.setPassword(passwordEncoder.encode("123456")); // mật khẩu mặc định
+                admin.setPassword(passwordEncoder.encode("1")); // mật khẩu mặc định
                 admin.setRole("ROLE_ADMIN");
                 accountRepository.save(admin);
-                System.out.println("✅ Default admin created: admin@gmail.com / 123456");
+                System.out.println("✅ Default admin created: admin@gmail.com / 1");
             }
         };
     }
