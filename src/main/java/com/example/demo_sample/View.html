@@ -241,9 +241,19 @@
         if (res.ok) {
             accessToken = data.accessToken;
             isAdmin = data.email.toLowerCase() === "admin@gmail.com";
+
             authScreen.classList.add("hidden");
             mainScreen.classList.remove("hidden");
-            if (isAdmin) userTabBtn.classList.remove("hidden");
+
+            // Hiển thị tab user chỉ với admin
+            if (isAdmin) {
+                userTabBtn.classList.remove("hidden");
+                userTabBtn.addEventListener("click", showUserTab);
+            } else {
+                userTabBtn.classList.add("hidden");
+                userTab.classList.add("hidden");
+            }
+
             loadTasks();
             if (isAdmin) loadUsers();
         } else {
@@ -262,6 +272,8 @@
         userList.innerHTML = "";
         mainScreen.classList.add("hidden");
         authScreen.classList.remove("hidden");
+        userTabBtn.classList.add("hidden");
+        userTab.classList.add("hidden");
         alert("Đăng xuất thành công");
     });
 
@@ -311,7 +323,6 @@
             resetTaskForm();
             loadTasks(currentPage);
 
-            // Đồng bộ searchResult nếu đang hiển thị task đó
             const searchId = Number(searchTaskId.value);
             if(searchId && Number(id) === searchId){
                 renderTaskUI({...body, taskId: Number(id)}, document.getElementById("searchResult"));
@@ -413,16 +424,21 @@
 
     // ===== User Management =====
     taskTabBtn.addEventListener("click", ()=>{
-        taskTabBtn.classList.add("active"); userTabBtn.classList.remove("active");
-        taskTab.classList.remove("hidden"); userTab.classList.add("hidden");
+        taskTabBtn.classList.add("active");
+        userTabBtn.classList.remove("active");
+        taskTab.classList.remove("hidden");
+        userTab.classList.add("hidden");
     });
 
-    userTabBtn.addEventListener("click", ()=>{
-        userTabBtn.classList.add("active"); taskTabBtn.classList.remove("active");
-        userTab.classList.remove("hidden"); taskTab.classList.add("hidden");
-    });
+    function showUserTab(){
+        userTabBtn.classList.add("active");
+        taskTabBtn.classList.remove("active");
+        userTab.classList.remove("hidden");
+        taskTab.classList.add("hidden");
+    }
 
     async function loadUsers(){
+        if(!isAdmin) return;
         const res = await fetch(`${API_BASE}/account`,{
             headers:{ "Authorization": `Bearer ${accessToken}` }
         });
@@ -439,6 +455,7 @@
     }
 
     async function deleteUser(id){
+        if(!isAdmin) return;
         if(!confirm("Bạn có chắc muốn xóa user này?")) return;
         const res = await fetch(`${API_BASE}/account/${id}`,{
             method:"DELETE",
