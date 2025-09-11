@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Task Manager FE</title>
+    <style>
+        body {
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            background: linear-gradient(135deg, #6a11cb, #2575fc);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 900px;
+            padding: 20px;
+        }
+        .card {
+            background: #fff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+            margin-bottom: 20px;
+        }
+        h1, h2, h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        input, button {
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #2575fc;
+            box-shadow: 0 0 4px rgba(37,117,252,0.5);
+        }
+        button {
+            background: #2575fc;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            transition: 0.3s;
+        }
+        button:hover {
+            background: #1b5fd9;
+        }
+        .secondary-btn {
+            background: #777;
+        }
+        .secondary-btn:hover {
+            background: #555;
+        }
+        .task-list {
+            margin-top: 20px;
+        }
+        .task {
+            background: #f9f9f9;
+            border-left: 4px solid #2575fc;
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 6px;
+        }
+        .task-actions {
+            margin-top: 10px;
+        }
+        .hidden {
+            display: none;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 style="text-align:center; color:white; margin-bottom:20px;">Task Manager</h1>
+
+    <!-- ========== Màn hình 1: Auth ========== -->
+    <div id="authScreen" class="card">
+        <h2>Đăng ký</h2>
+        <form id="registerForm">
+            <input type="email" id="registerEmail" placeholder="Email" required>
+            <input type="password" id="registerPassword" placeholder="Mật khẩu" required>
+            <button type="submit">Đăng ký</button>
+        </form>
+
+        <h2 style="margin-top:20px;">Đăng nhập</h2>
+        <form id="loginForm">
+            <input type="email" id="loginEmail" placeholder="Email" required>
+            <input type="password" id="loginPassword" placeholder="Mật khẩu" required>
+            <button type="submit">Đăng nhập</button>
+        </form>
+    </div>
+
+    <!-- ========== Màn hình 2: Task CRUD ========== -->
+    <div id="taskScreen" class="hidden">
+        <div class="card">
+            <div class="header">
+                <h2>Quản lý Task</h2>
+                <button id="logoutBtn" class="secondary-btn">Đăng xuất</button>
+            </div>
+
+            <form id="taskForm">
+                <h3 id="taskFormTitle">Tạo Task</h3>
+                <input type="hidden" id="taskId">
+                <input type="text" id="requirementName" placeholder="Requirement Name" required>
+                <input type="text" id="assignee" placeholder="Assignee" required>
+                <input type="text" id="reviewer" placeholder="Reviewer" required>
+                <input type="number" id="taskTypeId" placeholder="TaskTypeId (1-4)" required>
+                <input type="date" id="date" required>
+                <input type="number" step="0.5" id="planFrom" placeholder="Plan From" required>
+                <input type="number" step="0.5" id="planTo" placeholder="Plan To" required>
+                <button type="submit">Lưu Task</button>
+                <button type="button" id="cancelEditBtn" class="secondary-btn hidden">Hủy</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h3>Danh sách Task</h3>
+            <div class="task-list" id="taskList"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = "http://localhost:8080/api";
+    let accessToken = null;
+
+    const authScreen = document.getElementById("authScreen");
+    const taskScreen = document.getElementById("taskScreen");
+
+    // ===== REGISTER =====
+    document.getElementById("registerForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = registerEmail.value;
+        const password = registerPassword.value;
+        const res = await fetch(`${API_BASE}/account/register`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ email, password })
+        });
+        if (res.ok) {
+            alert("Đăng ký thành công!");
+        } else {
+            alert("Đăng ký thất bại!");
+        }
+    });
+
+    // ===== LOGIN =====
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = loginEmail.value;
+        const password = loginPassword.value;
+        const res = await fetch(`${API_BASE}/account/login`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.message);
+            accessToken = data.accessToken;
+            authScreen.classList.add("hidden");
+            taskScreen.classList.remove("hidden");
+            loadTasks();
+        } else {
+            alert(data.error || "Đăng nhập thất bại");
+        }
+    });
+
+    // ===== LOGOUT =====
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+        await fetch(`${API_BASE}/account/logout`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${accessToken}` }
+        });
+        accessToken = null;
+        taskList.innerHTML = "";
+        taskScreen.classList.add("hidden");
+        authScreen.classList.remove("hidden");
+        alert("Đăng xuất thành công");
+    });
+
+    // ===== TASK CRUD =====
+    document.getElementById("taskForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const id = taskId.value;
+        const body = {
+            requirementName: requirementName.value,
+            assignee: assignee.value,
+            reviewer: reviewer.value,
+            taskTypeId: parseInt(taskTypeId.value),
+            date: date.value,
+            planFrom: parseFloat(planFrom.value),
+            planTo: parseFloat(planTo.value)
+        };
+
+        let url = `${API_BASE}/tasks`;
+        let method = "POST";
+        if (id) {
+            url = `${API_BASE}/tasks/${id}`;
+            method = "PUT";
+        }
+
+        const res = await fetch(url, {
+            method,
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${accessToken}`
+            },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.message);
+            resetForm();
+            loadTasks();
+        } else {
+            alert(JSON.stringify(data));
+        }
+    });
+
+    document.getElementById("cancelEditBtn").addEventListener("click", resetForm);
+
+    async function loadTasks() {
+        const res = await fetch(`${API_BASE}/tasks`, {
+            headers: { "Authorization": `Bearer ${accessToken}` }
+        });
+        const page = await res.json();
+        const tasks = page.content || [];
+        taskList.innerHTML = tasks.map(t => `
+        <div class="task">
+          <b>ID:</b> ${t.taskId}<br>
+          <b>Requirement:</b> ${t.requirementName}<br>
+          <b>Assignee:</b> ${t.assignee}<br>
+          <b>Reviewer:</b> ${t.reviewer}<br>
+          <b>Date:</b> ${t.date}<br>
+          <b>Plan:</b> ${t.planFrom} - ${t.planTo}<br>
+          <div class="task-actions">
+            <button onclick="editTask(${t.taskId})">✏️ Sửa</button>
+            <button onclick="deleteTask(${t.taskId})">🗑️ Xóa</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    async function editTask(id) {
+        const res = await fetch(`${API_BASE}/tasks/${id}`, {
+            headers: { "Authorization": `Bearer ${accessToken}` }
+        });
+        const t = await res.json();
+        taskId.value = t.taskId;
+        requirementName.value = t.requirementName;
+        assignee.value = t.assignee;
+        reviewer.value = t.reviewer;
+        taskTypeId.value = t.taskTypeId;
+        date.value = t.date;
+        planFrom.value = t.planFrom;
+        planTo.value = t.planTo;
+        document.getElementById("taskFormTitle").innerText = "Cập nhật Task";
+        cancelEditBtn.classList.remove("hidden");
+    }
+
+    async function deleteTask(id) {
+        if (!confirm("Bạn có chắc muốn xóa task này?")) return;
+        const res = await fetch(`${API_BASE}/tasks/${id}`, {
+            method: "DELETE",
+            headers: { "Authorization": `Bearer ${accessToken}` }
+        });
+        if (res.ok) {
+            alert("Xóa task thành công");
+            loadTasks();
+        } else {
+            const data = await res.json();
+            alert(data.error || "Xóa thất bại");
+        }
+    }
+
+    function resetForm() {
+        taskForm.reset();
+        taskId.value = "";
+        document.getElementById("taskFormTitle").innerText = "Tạo Task";
+        cancelEditBtn.classList.add("hidden");
+    }
+</script>
+</body>
+</html>
