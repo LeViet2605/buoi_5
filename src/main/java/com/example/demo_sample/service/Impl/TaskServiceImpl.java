@@ -33,11 +33,10 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public void create(CreateTaskDTO data) {
+    public TaskEntity create(CreateTaskDTO data) {
         Assert.notNull(data, "cannot be null");
-
         TaskEntity newTaskEntity = convertFrom(data);
-        taskRepository.save(newTaskEntity);
+        return taskRepository.save(newTaskEntity); // sẽ có id
     }
 
     public TaskEntity convertFrom(CreateTaskDTO data) {

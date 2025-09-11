@@ -38,8 +38,13 @@ public class TaskController {
         if (!errorMap.isEmpty()) {
             return ResponseEntity.badRequest().body(errorMap);
         }
-        taskService.create(task);
-        return ResponseEntity.ok().body(null);
+
+        TaskEntity created = taskService.create(task);
+
+        return ResponseEntity.status(201).body(Map.of(
+                "message", "Tạo task thành công",
+                "id Task", created.getTaskId()
+        ));
     }
 
     @PutMapping("/{id}")
@@ -49,7 +54,7 @@ public class TaskController {
             return ResponseEntity.badRequest().body(errorMap);
         }
         taskService.update(id, task);
-        return ResponseEntity.ok().body(null);
+        return ResponseEntity.ok(Map.of("message", "Update task thành công"));
     }
 
 //    @DeleteMapping("/{id}")

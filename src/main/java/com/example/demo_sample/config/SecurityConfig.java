@@ -71,33 +71,34 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(request -> {
+                    var corsConfig = new org.springframework.web.cors.CorsConfiguration();
+                    corsConfig.addAllowedOriginPattern("*"); // ✅ cho tất cả FE gọi BE
+                    corsConfig.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                    corsConfig.setAllowedHeaders(java.util.List.of("*"));
+                    corsConfig.setAllowCredentials(true);
+                    return corsConfig;
+                }))
+
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Cho phép tất cả đăng ký & login
                         .requestMatchers(HttpMethod.POST, "/api/account/register", "/api/account/login").permitAll()
-
-                        // Chỉ ADMIN được xoá account
                         .requestMatchers(HttpMethod.DELETE, "/api/account/**").hasRole("ADMIN")
-
-                        // USER và ADMIN đều được xem/thêm task
                         .requestMatchers(HttpMethod.GET, "/api/tasks/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/tasks/**").hasAnyRole("USER", "ADMIN")
-
-                        // Chỉ ADMIN được xoá task
                         .requestMatchers(HttpMethod.DELETE, "/api/tasks/**").hasRole("ADMIN")
-
-                        // Các request khác cần login
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(authenticationEntryPoint()) // chưa login / token sai
-                        .accessDeniedHandler(accessDeniedHandler()) // có token nhưng không có quyền
+                        .authenticationEntryPoint(authenticationEntryPoint())
+                        .accessDeniedHandler(accessDeniedHandler())
                 )
                 .formLogin(form -> form.disable());
 
         return http.build();
     }
+
 
     // 🔥 Tạo admin mặc định khi app khởi động
     @Bean

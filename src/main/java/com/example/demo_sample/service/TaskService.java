@@ -14,7 +14,7 @@ public interface TaskService {
 
     public TaskEntity getById(Integer id);
 
-    public void create(CreateTaskDTO data);
+    public TaskEntity create(CreateTaskDTO data);
 
     public void update(Integer id, UpdateTaskDTO data);
 
