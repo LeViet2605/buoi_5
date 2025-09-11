@@ -63,17 +63,17 @@
         .secondary-btn:hover {
             background: #555;
         }
-        .task-list {
+        .task-list, .user-list {
             margin-top: 20px;
         }
-        .task {
+        .task, .user {
             background: #f9f9f9;
             border-left: 4px solid #2575fc;
             padding: 12px;
             margin-bottom: 12px;
             border-radius: 6px;
         }
-        .task-actions {
+        .task-actions, .user-actions {
             margin-top: 10px;
         }
         .hidden {
@@ -85,7 +85,20 @@
             align-items: center;
             margin-bottom: 20px;
         }
-        /* ==== Pagination ==== */
+        .tab-btns {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .tab-btns button {
+            background: #777;
+            color: white;
+            font-weight: bold;
+        }
+        .tab-btns button.active {
+            background: #2575fc;
+        }
+        /* Pagination */
         .pagination {
             display: flex;
             justify-content: center;
@@ -115,7 +128,7 @@
 <div class="container">
     <h1 style="text-align:center; color:white; margin-bottom:20px;">Task Manager</h1>
 
-    <!-- ========== Màn hình 1: Auth ========== -->
+    <!-- ===== Auth Screen ===== -->
     <div id="authScreen" class="card">
         <h2>Đăng ký</h2>
         <form id="registerForm">
@@ -132,44 +145,56 @@
         </form>
     </div>
 
-    <!-- ========== Màn hình 2: Task CRUD ========== -->
-    <div id="taskScreen" class="hidden">
-        <div class="card">
-            <div class="header">
-                <h2>Quản lý Task</h2>
-                <button id="logoutBtn" class="secondary-btn">Đăng xuất</button>
+    <!-- ===== Main Screen ===== -->
+    <div id="mainScreen" class="hidden">
+        <div class="header">
+            <div class="tab-btns">
+                <button id="taskTabBtn" class="active">Quản lý Task</button>
+                <button id="userTabBtn" class="hidden">Quản lý User</button>
+            </div>
+            <button id="logoutBtn" class="secondary-btn">Đăng xuất</button>
+        </div>
+
+        <!-- Task Management Tab -->
+        <div id="taskTab">
+            <div class="card">
+                <form id="taskForm">
+                    <h3 id="taskFormTitle">Tạo Task</h3>
+                    <input type="hidden" id="taskId">
+                    <input type="text" id="requirementName" placeholder="Requirement Name" required>
+                    <input type="text" id="assignee" placeholder="Assignee" required>
+                    <input type="text" id="reviewer" placeholder="Reviewer" required>
+                    <input type="number" id="taskTypeId" placeholder="TaskTypeId (1-4)" required>
+                    <input type="date" id="date" required>
+                    <input type="number" step="0.5" id="planFrom" placeholder="Plan From" required>
+                    <input type="number" step="0.5" id="planTo" placeholder="Plan To" required>
+                    <button type="submit">Lưu Task</button>
+                    <button type="button" id="cancelEditBtn" class="secondary-btn hidden">Hủy</button>
+                </form>
             </div>
 
-            <form id="taskForm">
-                <h3 id="taskFormTitle">Tạo Task</h3>
-                <input type="hidden" id="taskId">
-                <input type="text" id="requirementName" placeholder="Requirement Name" required>
-                <input type="text" id="assignee" placeholder="Assignee" required>
-                <input type="text" id="reviewer" placeholder="Reviewer" required>
-                <input type="number" id="taskTypeId" placeholder="TaskTypeId (1-4)" required>
-                <input type="date" id="date" required>
-                <input type="number" step="0.5" id="planFrom" placeholder="Plan From" required>
-                <input type="number" step="0.5" id="planTo" placeholder="Plan To" required>
-                <button type="submit">Lưu Task</button>
-                <button type="button" id="cancelEditBtn" class="secondary-btn hidden">Hủy</button>
-            </form>
+            <div class="card">
+                <h3>Tìm kiếm Task theo ID</h3>
+                <form id="searchForm">
+                    <input type="number" id="searchTaskId" placeholder="Nhập Task ID" required>
+                    <button type="submit">Tìm kiếm</button>
+                </form>
+                <div id="searchResult" style="margin-top:15px;"></div>
+            </div>
+
+            <div class="card">
+                <h3>Danh sách Task</h3>
+                <div class="task-list" id="taskList"></div>
+                <div class="pagination" id="pagination"></div>
+            </div>
         </div>
 
-        <!-- 🔍 Search Task -->
-        <div class="card">
-            <h3>Tìm kiếm Task theo ID</h3>
-            <form id="searchForm">
-                <input type="number" id="searchTaskId" placeholder="Nhập Task ID" required>
-                <button type="submit">Tìm kiếm</button>
-            </form>
-            <div id="searchResult" style="margin-top:15px;"></div>
-        </div>
-
-        <div class="card">
-            <h3>Danh sách Task</h3>
-            <div class="task-list" id="taskList"></div>
-            <!-- Pagination -->
-            <div class="pagination" id="pagination"></div>
+        <!-- User Management Tab -->
+        <div id="userTab" class="hidden">
+            <div class="card">
+                <h3>Danh sách User</h3>
+                <div class="user-list" id="userList"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -179,9 +204,14 @@
     let accessToken = null;
     let currentPage = 0;
     let totalPages = 1;
+    let isAdmin = false;
 
     const authScreen = document.getElementById("authScreen");
-    const taskScreen = document.getElementById("taskScreen");
+    const mainScreen = document.getElementById("mainScreen");
+    const taskTabBtn = document.getElementById("taskTabBtn");
+    const userTabBtn = document.getElementById("userTabBtn");
+    const taskTab = document.getElementById("taskTab");
+    const userTab = document.getElementById("userTab");
 
     // ===== REGISTER =====
     document.getElementById("registerForm").addEventListener("submit", async (e) => {
@@ -193,11 +223,8 @@
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ email, password })
         });
-        if (res.ok) {
-            alert("Đăng ký thành công!");
-        } else {
-            alert("Đăng ký thất bại!");
-        }
+        if (res.ok) alert("Đăng ký thành công!");
+        else alert("Đăng ký thất bại!");
     });
 
     // ===== LOGIN =====
@@ -212,11 +239,13 @@
         });
         const data = await res.json();
         if (res.ok) {
-            alert(data.message);
             accessToken = data.accessToken;
+            isAdmin = data.email.toLowerCase() === "admin@gmail.com";
             authScreen.classList.add("hidden");
-            taskScreen.classList.remove("hidden");
+            mainScreen.classList.remove("hidden");
+            if (isAdmin) userTabBtn.classList.remove("hidden");
             loadTasks();
+            if (isAdmin) loadUsers();
         } else {
             alert(data.error || "Đăng nhập thất bại");
         }
@@ -230,12 +259,30 @@
         });
         accessToken = null;
         taskList.innerHTML = "";
-        taskScreen.classList.add("hidden");
+        userList.innerHTML = "";
+        mainScreen.classList.add("hidden");
         authScreen.classList.remove("hidden");
         alert("Đăng xuất thành công");
     });
 
-    // ===== TASK CRUD =====
+    // ===== Helper: render 1 task =====
+    function renderTaskUI(t, container) {
+        container.innerHTML = `
+        <div class="task">
+            <b>ID:</b> ${t.taskId}<br>
+            <b>Requirement:</b> ${t.requirementName}<br>
+            <b>Assignee:</b> ${t.assignee}<br>
+            <b>Reviewer:</b> ${t.reviewer}<br>
+            <b>Date:</b> ${t.date}<br>
+            <b>Plan:</b> ${t.planFrom} - ${t.planTo}<br>
+            <div class="task-actions">
+                <button onclick="editTask(${t.taskId})">✏️ Sửa</button>
+                <button onclick="deleteTask(${t.taskId})">🗑️ Xóa</button>
+            </div>
+        </div>`;
+    }
+
+    // ===== Task CRUD =====
     document.getElementById("taskForm").addEventListener("submit", async (e) => {
         e.preventDefault();
         const id = taskId.value;
@@ -248,14 +295,8 @@
             planFrom: parseFloat(planFrom.value),
             planTo: parseFloat(planTo.value)
         };
-
-        let url = `${API_BASE}/tasks`;
-        let method = "POST";
-        if (id) {
-            url = `${API_BASE}/tasks/${id}`;
-            method = "PUT";
-        }
-
+        let url = `${API_BASE}/tasks`, method = "POST";
+        if (id) { url = `${API_BASE}/tasks/${id}`; method = "PUT"; }
         const res = await fetch(url, {
             method,
             headers: {
@@ -267,20 +308,18 @@
         const data = await res.json();
         if (res.ok) {
             alert(data.message);
-            resetForm();
+            resetTaskForm();
             loadTasks(currentPage);
 
-            // 🔥 Reload lại search nếu đang hiển thị đúng task vừa sửa
-            const searchId = document.getElementById("searchTaskId").value;
-            if (searchId && searchId == (id || data.taskId)) {
-                searchTask(searchId);
+            // Đồng bộ searchResult nếu đang hiển thị task đó
+            const searchId = Number(searchTaskId.value);
+            if(searchId && Number(id) === searchId){
+                renderTaskUI({...body, taskId: Number(id)}, document.getElementById("searchResult"));
             }
-        } else {
-            alert(JSON.stringify(data));
-        }
+        } else alert(JSON.stringify(data));
     });
 
-    document.getElementById("cancelEditBtn").addEventListener("click", resetForm);
+    document.getElementById("cancelEditBtn").addEventListener("click", resetTaskForm);
 
     async function loadTasks(page = 0) {
         const res = await fetch(`${API_BASE}/tasks?page=${page}&size=2`, {
@@ -293,42 +332,34 @@
 
         taskList.innerHTML = tasks.map(t => `
         <div class="task">
-          <b>ID:</b> ${t.taskId}<br>
-          <b>Requirement:</b> ${t.requirementName}<br>
-          <b>Assignee:</b> ${t.assignee}<br>
-          <b>Reviewer:</b> ${t.reviewer}<br>
-          <b>Date:</b> ${t.date}<br>
-          <b>Plan:</b> ${t.planFrom} - ${t.planTo}<br>
-          <div class="task-actions">
-            <button onclick="editTask(${t.taskId})">✏️ Sửa</button>
-            <button onclick="deleteTask(${t.taskId})">🗑️ Xóa</button>
-          </div>
-        </div>
-      `).join("");
-
+            <b>ID:</b> ${t.taskId}<br>
+            <b>Requirement:</b> ${t.requirementName}<br>
+            <b>Assignee:</b> ${t.assignee}<br>
+            <b>Reviewer:</b> ${t.reviewer}<br>
+            <b>Date:</b> ${t.date}<br>
+            <b>Plan:</b> ${t.planFrom} - ${t.planTo}<br>
+            <div class="task-actions">
+                <button onclick="editTask(${t.taskId})">✏️ Sửa</button>
+                <button onclick="deleteTask(${t.taskId})">🗑️ Xóa</button>
+            </div>
+        </div>`).join("");
         renderPagination();
     }
 
     function renderPagination() {
         const pagination = document.getElementById("pagination");
-        let buttons = "";
-        buttons += `<button onclick="changePage(${currentPage - 1})" class="${currentPage === 0 ? 'disabled' : ''}">«</button>`;
-        for (let i = 0; i < totalPages; i++) {
-            buttons += `<button onclick="changePage(${i})" class="${i === currentPage ? 'active' : ''}">${i + 1}</button>`;
+        let buttons = `<button onclick="changePage(${currentPage-1})" class="${currentPage===0?'disabled':''}">«</button>`;
+        for(let i=0;i<totalPages;i++){
+            buttons += `<button onclick="changePage(${i})" class="${i===currentPage?'active':''}">${i+1}</button>`;
         }
-        buttons += `<button onclick="changePage(${currentPage + 1})" class="${currentPage === totalPages - 1 ? 'disabled' : ''}">»</button>`;
+        buttons += `<button onclick="changePage(${currentPage+1})" class="${currentPage===totalPages-1?'disabled':''}">»</button>`;
         pagination.innerHTML = buttons;
     }
 
-    function changePage(page) {
-        if (page < 0 || page >= totalPages) return;
-        loadTasks(page);
-    }
+    function changePage(page){ if(page<0||page>=totalPages)return; loadTasks(page); }
 
-    async function editTask(id) {
-        const res = await fetch(`${API_BASE}/tasks/${id}`, {
-            headers: { "Authorization": `Bearer ${accessToken}` }
-        });
+    async function editTask(id){
+        const res = await fetch(`${API_BASE}/tasks/${id}`, { headers:{ "Authorization": `Bearer ${accessToken}` } });
         const t = await res.json();
         taskId.value = t.taskId;
         requirementName.value = t.requirementName;
@@ -338,66 +369,83 @@
         date.value = t.date;
         planFrom.value = t.planFrom;
         planTo.value = t.planTo;
-        document.getElementById("taskFormTitle").innerText = "Cập nhật Task";
+        document.getElementById("taskFormTitle").innerText="Cập nhật Task";
         cancelEditBtn.classList.remove("hidden");
     }
 
-    async function deleteTask(id, fromSearch = false) {
-        if (!confirm("Bạn có chắc muốn xóa task này?")) return;
+    async function deleteTask(id){
+        if(!confirm("Bạn có chắc muốn xóa task này?")) return;
         const res = await fetch(`${API_BASE}/tasks/${id}`, {
-            method: "DELETE",
-            headers: { "Authorization": `Bearer ${accessToken}` }
+            method:"DELETE",
+            headers:{ "Authorization": `Bearer ${accessToken}` }
         });
-        if (res.ok) {
+        if(res.ok){
             alert("Xóa task thành công");
             loadTasks(currentPage);
-            if (fromSearch) {
+
+            const searchId = Number(searchTaskId.value);
+            if(searchId && searchId === id){
                 document.getElementById("searchResult").innerHTML = "";
             }
-        } else {
-            const data = await res.json();
-            alert(data.error || "Xóa thất bại");
-        }
+        } else{ const data = await res.json(); alert(data.error || "Xóa thất bại");}
     }
 
-    function resetForm() {
+    function resetTaskForm(){
         taskForm.reset();
         taskId.value = "";
-        document.getElementById("taskFormTitle").innerText = "Tạo Task";
+        document.getElementById("taskFormTitle").innerText="Tạo Task";
         cancelEditBtn.classList.add("hidden");
     }
 
     // ===== SEARCH TASK =====
-    document.getElementById("searchForm").addEventListener("submit", async (e) => {
+    document.getElementById("searchForm").addEventListener("submit", async (e)=>{
         e.preventDefault();
-        const id = document.getElementById("searchTaskId").value;
-        searchTask(id);
-    });
-
-    async function searchTask(id) {
-        const res = await fetch(`${API_BASE}/tasks/search?id=${id}`, {
-            headers: { "Authorization": `Bearer ${accessToken}` }
+        const id = Number(searchTaskId.value);
+        const res = await fetch(`${API_BASE}/tasks/search?id=${id}`,{
+            headers:{ "Authorization": `Bearer ${accessToken}` }
         });
         const container = document.getElementById("searchResult");
-        if (res.ok) {
+        if(res.ok){
             const t = await res.json();
-            container.innerHTML = `
-                <div class="task">
-                  <b>ID:</b> ${t.taskId}<br>
-                  <b>Requirement:</b> ${t.requirementName}<br>
-                  <b>Assignee:</b> ${t.assignee}<br>
-                  <b>Reviewer:</b> ${t.reviewer}<br>
-                  <b>Date:</b> ${t.date}<br>
-                  <b>Plan:</b> ${t.planFrom} - ${t.planTo}<br>
-                  <div class="task-actions">
-                    <button onclick="editTask(${t.taskId})">✏️ Sửa</button>
-                    <button onclick="deleteTask(${t.taskId}, true)">🗑️ Xóa</button>
-                  </div>
+            renderTaskUI(t, container);
+        }else{ container.innerHTML = `<p style="color:red;">Không tìm thấy Task với ID ${id}</p>`; }
+    });
+
+    // ===== User Management =====
+    taskTabBtn.addEventListener("click", ()=>{
+        taskTabBtn.classList.add("active"); userTabBtn.classList.remove("active");
+        taskTab.classList.remove("hidden"); userTab.classList.add("hidden");
+    });
+
+    userTabBtn.addEventListener("click", ()=>{
+        userTabBtn.classList.add("active"); taskTabBtn.classList.remove("active");
+        userTab.classList.remove("hidden"); taskTab.classList.add("hidden");
+    });
+
+    async function loadUsers(){
+        const res = await fetch(`${API_BASE}/account`,{
+            headers:{ "Authorization": `Bearer ${accessToken}` }
+        });
+        if(res.ok){
+            const users = await res.json();
+            userList.innerHTML = users.map(u=>`
+            <div class="user">
+                <b>ID:</b> ${u.id} <b>Email:</b> ${u.email}<br>
+                <div class="user-actions">
+                    <button onclick="deleteUser(${u.id})">🗑️ Xóa User</button>
                 </div>
-            `;
-        } else {
-            container.innerHTML = `<p style="color:red;">Không tìm thấy Task với ID ${id}</p>`;
+            </div>`).join("");
         }
+    }
+
+    async function deleteUser(id){
+        if(!confirm("Bạn có chắc muốn xóa user này?")) return;
+        const res = await fetch(`${API_BASE}/account/${id}`,{
+            method:"DELETE",
+            headers:{ "Authorization": `Bearer ${accessToken}` }
+        });
+        if(res.ok){ alert("Xóa user thành công"); loadUsers(); }
+        else{ const data = await res.json(); alert(data.error || "Xóa thất bại"); }
     }
 </script>
 </body>
