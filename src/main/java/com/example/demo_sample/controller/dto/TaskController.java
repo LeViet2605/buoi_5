@@ -90,4 +90,14 @@ public class TaskController {
         PageRequest pageable = PageRequest.of(page, size);
         return taskService.paginate(pageable);
     }
+
+    @GetMapping("/search")
+    public ResponseEntity<?> searchTaskById(@RequestParam Integer id) {
+        TaskEntity task = taskService.getById(id);
+        if (task == null) {
+            return ResponseEntity.status(404).body(Map.of("error", "Task không tồn tại"));
+        }
+        return ResponseEntity.ok(task);
+    }
+
 }

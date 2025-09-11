@@ -155,6 +155,16 @@
             </form>
         </div>
 
+        <!-- 🔍 Search Task -->
+        <div class="card">
+            <h3>Tìm kiếm Task theo ID</h3>
+            <form id="searchForm">
+                <input type="number" id="searchTaskId" placeholder="Nhập Task ID" required>
+                <button type="submit">Tìm kiếm</button>
+            </form>
+            <div id="searchResult" style="margin-top:15px;"></div>
+        </div>
+
         <div class="card">
             <h3>Danh sách Task</h3>
             <div class="task-list" id="taskList"></div>
@@ -356,6 +366,33 @@
         document.getElementById("taskFormTitle").innerText = "Tạo Task";
         cancelEditBtn.classList.add("hidden");
     }
+
+    // ===== SEARCH TASK =====
+    document.getElementById("searchForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const id = document.getElementById("searchTaskId").value;
+
+        const res = await fetch(`${API_BASE}/tasks/search?id=${id}`, {
+            headers: { "Authorization": `Bearer ${accessToken}` }
+        });
+
+        const container = document.getElementById("searchResult");
+        if (res.ok) {
+            const t = await res.json();
+            container.innerHTML = `
+                <div class="task">
+                  <b>ID:</b> ${t.taskId}<br>
+                  <b>Requirement:</b> ${t.requirementName}<br>
+                  <b>Assignee:</b> ${t.assignee}<br>
+                  <b>Reviewer:</b> ${t.reviewer}<br>
+                  <b>Date:</b> ${t.date}<br>
+                  <b>Plan:</b> ${t.planFrom} - ${t.planTo}
+                </div>
+            `;
+        } else {
+            container.innerHTML = `<p style="color:red;">Không tìm thấy Task với ID ${id}</p>`;
+        }
+    });
 </script>
 </body>
 </html>
