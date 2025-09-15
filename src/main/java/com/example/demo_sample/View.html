@@ -255,14 +255,12 @@
 
             if (isAdmin) {
                 userTabBtn.classList.remove("hidden");
-                userTabBtn.addEventListener("click", showUserTab);
             } else {
                 userTabBtn.classList.add("hidden");
                 userTab.classList.add("hidden");
             }
 
             loadTasks();
-            if (isAdmin) loadUsers();
         } else {
             alert(data.error || "Đăng nhập thất bại");
         }
@@ -330,7 +328,6 @@
             alert(data.message);
             resetTaskForm();
             loadTasks(currentPage);
-            // refresh search nếu có
             document.getElementById("searchForm").dispatchEvent(new Event("submit"));
         } else alert(JSON.stringify(data));
     });
@@ -410,7 +407,7 @@
         cancelEditBtn.classList.add("hidden");
     }
 
-    // ===== SEARCH TASK (1 input, có sửa/xóa) =====
+    // ===== SEARCH TASK =====
     document.getElementById("searchForm").addEventListener("submit", async (e)=>{
         e.preventDefault();
         const keyword = searchKeyword.value.trim();
@@ -477,26 +474,37 @@
 
     // ===== USERS (Admin only) =====
     async function loadUsers(){
-        const res = await fetch(`${API_BASE}/users`, { headers:{ "Authorization": `Bearer ${accessToken}` } });
-        const users = await res.json();
-        userList.innerHTML = users.map(u => `
-            <div class="user">
-                <b>ID:</b> ${u.id}<br>
-                <b>Email:</b> ${u.email}<br>
-                <div class="user-actions">
-                    <button onclick="deleteUser(${u.id})">🗑️ Xóa</button>
+        try {
+            const res = await fetch(`${API_BASE}/account`, { headers:{ "Authorization": `Bearer ${accessToken}` } });
+            if(!res.ok) throw new Error("Lấy danh sách user thất bại");
+            const users = await res.json();
+            userList.innerHTML = users.map(u => `
+                <div class="user">
+                    <b>ID:</b> ${u.id} <br>
+                    <b>Email:</b> ${u.email} <br>
+                    <div class="user-actions">
+                        <button onclick="deleteUser(${u.id})">🗑️ Xóa</button>
+                    </div>
                 </div>
-            </div>`).join("");
+            `).join("");
+        } catch(err) {
+            userList.innerHTML = `<p style="color:red;">${err.message}</p>`;
+        }
     }
 
     async function deleteUser(id){
-        if(!confirm("Xóa user này?")) return;
-        const res = await fetch(`${API_BASE}/users/${id}`, {
-            method:"DELETE",
-            headers:{ "Authorization": `Bearer ${accessToken}` }
-        });
-        if(res.ok){ alert("Xóa user thành công"); loadUsers(); }
-        else{ const data = await res.json(); alert(data.error || "Xóa thất bại"); }
+        if(!confirm("Bạn có chắc muốn xóa user này?")) return;
+        try {
+            const res = await fetch(`${API_BASE}/account/${id}`,{
+                method:"DELETE",
+                headers:{ "Authorization": `Bearer ${accessToken}` }
+            });
+            if(!res.ok) throw new Error("Xóa thất bại");
+            alert("Xóa user thành công");
+            await loadUsers();
+        } catch(err) {
+            alert(err.message);
+        }
     }
 
     // ===== Tabs =====
@@ -506,12 +514,17 @@
         taskTab.classList.remove("hidden");
         userTab.classList.add("hidden");
     });
-    function showUserTab(){
+
+    userTabBtn.addEventListener("click", async ()=>{
         taskTabBtn.classList.remove("active");
         userTabBtn.classList.add("active");
         taskTab.classList.add("hidden");
         userTab.classList.remove("hidden");
-    }
+
+        if(!isAdmin) return;
+        await loadUsers();
+    });
 </script>
+
 </body>
 </html>
