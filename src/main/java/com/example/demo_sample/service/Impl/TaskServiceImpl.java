@@ -100,5 +100,26 @@ public class TaskServiceImpl implements TaskService {
                 .toList();
     }
 
+    @Override
+    public Page<TaskEntity> search(Integer id, Integer taskTypeId, String requirementName, Pageable pageable) {
+        return taskRepository.findAll((root, query, cb) -> {
+            // danh sách điều kiện
+            var predicates = new java.util.ArrayList<>();
+
+            if (id != null) {
+                predicates.add(cb.equal(root.get("taskId"), id));
+            }
+            if (taskTypeId != null) {
+                predicates.add(cb.equal(root.get("taskTypeId"), taskTypeId));
+            }
+            if (requirementName != null && !requirementName.isBlank()) {
+                predicates.add(cb.like(cb.lower(root.get("requirementName")), "%" + requirementName.toLowerCase() + "%"));
+            }
+
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        }, pageable);
+    }
+
+
 
 }

@@ -92,13 +92,23 @@ public class TaskController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<?> searchTaskById(@RequestParam Integer id) {
-        TaskEntity task = taskService.getById(id);
-        if (task == null) {
-            return ResponseEntity.status(404).body(Map.of("error", "Task không tồn tại"));
+    public ResponseEntity<?> searchTasks(
+            @RequestParam(required = false) Integer id,
+            @RequestParam(required = false) Integer taskTypeId,
+            @RequestParam(required = false) String requirementName,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size
+    ) {
+        PageRequest pageable = PageRequest.of(page, size);
+        Page<TaskEntity> tasks = taskService.search(id, taskTypeId, requirementName, pageable);
+
+        if (tasks.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of("error", "Không tìm thấy task nào"));
         }
-        return ResponseEntity.ok(task);
+
+        return ResponseEntity.ok(tasks);
     }
+
 
     @GetMapping("/count-all")
     public ResponseEntity<?> countAllTypes() {

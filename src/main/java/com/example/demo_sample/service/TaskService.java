@@ -23,5 +23,8 @@ public interface TaskService {
     public void delete(Integer id);
 
     public List<String> countTasksGroupByType();
+
+    public Page<TaskEntity> search(Integer id, Integer taskTypeId, String requirementName, Pageable pageable);
+
 }
 

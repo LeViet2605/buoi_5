@@ -173,10 +173,11 @@
                 </form>
             </div>
 
+            <!-- 🔎 Search Task -->
             <div class="card">
-                <h3>Tìm kiếm Task theo ID</h3>
+                <h3>Tìm kiếm Task</h3>
                 <form id="searchForm">
-                    <input type="number" id="searchTaskId" placeholder="Nhập Task ID" required>
+                    <input type="text" id="searchKeyword" placeholder="Nhập Task ID hoặc Requirement Name">
                     <button type="submit">Tìm kiếm</button>
                 </form>
                 <div id="searchResult" style="margin-top:15px;"></div>
@@ -186,6 +187,13 @@
                 <h3>Danh sách Task</h3>
                 <div class="task-list" id="taskList"></div>
                 <div class="pagination" id="pagination"></div>
+            </div>
+
+            <!-- NEW: Count All Tasks -->
+            <div class="card">
+                <h3>Thống kê Task theo Type</h3>
+                <button id="countAllBtn">Count All Status</button>
+                <div id="countAllResult" style="margin-top: 15px; white-space: pre-line;"></div>
             </div>
         </div>
 
@@ -245,7 +253,6 @@
             authScreen.classList.add("hidden");
             mainScreen.classList.remove("hidden");
 
-            // Hiển thị tab user chỉ với admin
             if (isAdmin) {
                 userTabBtn.classList.remove("hidden");
                 userTabBtn.addEventListener("click", showUserTab);
@@ -285,6 +292,7 @@
             <b>Requirement:</b> ${t.requirementName}<br>
             <b>Assignee:</b> ${t.assignee}<br>
             <b>Reviewer:</b> ${t.reviewer}<br>
+            <b>TaskTypeId:</b> ${t.taskTypeId}<br>
             <b>Date:</b> ${t.date}<br>
             <b>Plan:</b> ${t.planFrom} - ${t.planTo}<br>
             <div class="task-actions">
@@ -322,11 +330,8 @@
             alert(data.message);
             resetTaskForm();
             loadTasks(currentPage);
-
-            const searchId = Number(searchTaskId.value);
-            if(searchId && Number(id) === searchId){
-                renderTaskUI({...body, taskId: Number(id)}, document.getElementById("searchResult"));
-            }
+            // refresh search nếu có
+            document.getElementById("searchForm").dispatchEvent(new Event("submit"));
         } else alert(JSON.stringify(data));
     });
 
@@ -347,6 +352,7 @@
             <b>Requirement:</b> ${t.requirementName}<br>
             <b>Assignee:</b> ${t.assignee}<br>
             <b>Reviewer:</b> ${t.reviewer}<br>
+            <b>TaskTypeId:</b> ${t.taskTypeId}<br>
             <b>Date:</b> ${t.date}<br>
             <b>Plan:</b> ${t.planFrom} - ${t.planTo}<br>
             <div class="task-actions">
@@ -393,11 +399,7 @@
         if(res.ok){
             alert("Xóa task thành công");
             loadTasks(currentPage);
-
-            const searchId = Number(searchTaskId.value);
-            if(searchId && searchId === id){
-                document.getElementById("searchResult").innerHTML = "";
-            }
+            document.getElementById("searchForm").dispatchEvent(new Event("submit"));
         } else{ const data = await res.json(); alert(data.error || "Xóa thất bại");}
     }
 
@@ -408,61 +410,107 @@
         cancelEditBtn.classList.add("hidden");
     }
 
-    // ===== SEARCH TASK =====
+    // ===== SEARCH TASK (1 input, có sửa/xóa) =====
     document.getElementById("searchForm").addEventListener("submit", async (e)=>{
         e.preventDefault();
-        const id = Number(searchTaskId.value);
-        const res = await fetch(`${API_BASE}/tasks/search?id=${id}`,{
+        const keyword = searchKeyword.value.trim();
+        if (!keyword) return;
+        let url = "";
+        if (!isNaN(keyword)) {
+            url = `${API_BASE}/tasks/search?id=${keyword}`;
+        } else {
+            url = `${API_BASE}/tasks/search?requirementName=${encodeURIComponent(keyword)}`;
+        }
+        const res = await fetch(url, {
             headers:{ "Authorization": `Bearer ${accessToken}` }
         });
         const container = document.getElementById("searchResult");
         if(res.ok){
-            const t = await res.json();
-            renderTaskUI(t, container);
-        }else{ container.innerHTML = `<p style="color:red;">Không tìm thấy Task với ID ${id}</p>`; }
+            const data = await res.json();
+            const tasks = data.content || (Array.isArray(data) ? data : [data]);
+            if(tasks.length > 0){
+                container.innerHTML = tasks.map(t => `
+                    <div class="task">
+                        <b>ID:</b> ${t.taskId}<br>
+                        <b>Requirement:</b> ${t.requirementName}<br>
+                        <b>Assignee:</b> ${t.assignee}<br>
+                        <b>Reviewer:</b> ${t.reviewer}<br>
+                        <b>TaskTypeId:</b> ${t.taskTypeId}<br>
+                        <b>Date:</b> ${t.date}<br>
+                        <div class="task-actions">
+                            <button onclick="editTask(${t.taskId})">✏️ Sửa</button>
+                            <button onclick="deleteTask(${t.taskId})">🗑️ Xóa</button>
+                        </div>
+                    </div>
+                `).join("");
+            } else {
+                container.innerHTML = "<p>Không tìm thấy Task nào</p>";
+            }
+        } else {
+            container.innerHTML = `<p style="color:red;">❌ Không tìm thấy task</p>`;
+        }
     });
 
-    // ===== User Management =====
+    // ===== Count All Tasks =====
+    document.getElementById("countAllBtn").addEventListener("click", async () => {
+        const res = await fetch(`${API_BASE}/tasks/count-all`, {
+            headers: { "Authorization": `Bearer ${accessToken}` }
+        });
+        const data = await res.json();
+        const resultDiv = document.getElementById("countAllResult");
+
+        if (res.ok) {
+            const message = data.message;
+            let text = "📊 Count All Status:\n";
+            if (Array.isArray(message)) {
+                text += message.join("\n");
+            } else {
+                for (const [typeId, count] of Object.entries(message)) {
+                    text += `TaskTypeId ${typeId}: ${count}\n`;
+                }
+            }
+            resultDiv.textContent = text;
+        } else {
+            resultDiv.textContent = data.error || "❌ Lỗi khi lấy thống kê";
+        }
+    });
+
+    // ===== USERS (Admin only) =====
+    async function loadUsers(){
+        const res = await fetch(`${API_BASE}/users`, { headers:{ "Authorization": `Bearer ${accessToken}` } });
+        const users = await res.json();
+        userList.innerHTML = users.map(u => `
+            <div class="user">
+                <b>ID:</b> ${u.id}<br>
+                <b>Email:</b> ${u.email}<br>
+                <div class="user-actions">
+                    <button onclick="deleteUser(${u.id})">🗑️ Xóa</button>
+                </div>
+            </div>`).join("");
+    }
+
+    async function deleteUser(id){
+        if(!confirm("Xóa user này?")) return;
+        const res = await fetch(`${API_BASE}/users/${id}`, {
+            method:"DELETE",
+            headers:{ "Authorization": `Bearer ${accessToken}` }
+        });
+        if(res.ok){ alert("Xóa user thành công"); loadUsers(); }
+        else{ const data = await res.json(); alert(data.error || "Xóa thất bại"); }
+    }
+
+    // ===== Tabs =====
     taskTabBtn.addEventListener("click", ()=>{
         taskTabBtn.classList.add("active");
         userTabBtn.classList.remove("active");
         taskTab.classList.remove("hidden");
         userTab.classList.add("hidden");
     });
-
     function showUserTab(){
-        userTabBtn.classList.add("active");
         taskTabBtn.classList.remove("active");
-        userTab.classList.remove("hidden");
+        userTabBtn.classList.add("active");
         taskTab.classList.add("hidden");
-    }
-
-    async function loadUsers(){
-        if(!isAdmin) return;
-        const res = await fetch(`${API_BASE}/account`,{
-            headers:{ "Authorization": `Bearer ${accessToken}` }
-        });
-        if(res.ok){
-            const users = await res.json();
-            userList.innerHTML = users.map(u=>`
-            <div class="user">
-                <b>ID:</b> ${u.id} <b>Email:</b> ${u.email}<br>
-                <div class="user-actions">
-                    <button onclick="deleteUser(${u.id})">🗑️ Xóa User</button>
-                </div>
-            </div>`).join("");
-        }
-    }
-
-    async function deleteUser(id){
-        if(!isAdmin) return;
-        if(!confirm("Bạn có chắc muốn xóa user này?")) return;
-        const res = await fetch(`${API_BASE}/account/${id}`,{
-            method:"DELETE",
-            headers:{ "Authorization": `Bearer ${accessToken}` }
-        });
-        if(res.ok){ alert("Xóa user thành công"); loadUsers(); }
-        else{ const data = await res.json(); alert(data.error || "Xóa thất bại"); }
+        userTab.classList.remove("hidden");
     }
 </script>
 </body>
