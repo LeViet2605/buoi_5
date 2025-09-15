@@ -6,12 +6,19 @@ import org.springframework.data.jpa.repository.Query;
 
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface TaskRepository extends JpaRepository<TaskEntity, Integer> {
 
+    // Lấy Task theo requirementName (dùng @Query)
     @Query("""
             SELECT t FROM TaskEntity t
             WHERE t.requirementName = :requirementName
            """)
     TaskEntity getByRequirementName(String requirementName);
+
+    // Đếm số task theo từng taskTypeId
+    @Query("SELECT t.taskTypeId, COUNT(t) FROM TaskEntity t GROUP BY t.taskTypeId")
+    List<Object[]> countTasksGroupByType();
 }

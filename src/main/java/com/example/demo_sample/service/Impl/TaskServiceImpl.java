@@ -16,6 +16,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class TaskServiceImpl implements TaskService {
@@ -87,4 +90,15 @@ public class TaskServiceImpl implements TaskService {
     public Page<TaskEntity> paginate(Pageable pageable) {
         return taskRepository.findAll(pageable);
     }
+
+
+    @Override
+    public List<String> countTasksGroupByType() {
+        List<Object[]> results = taskRepository.countTasksGroupByType();
+        return results.stream()
+                .map(row -> "TaskTypeId: " + row[0] + " - Count: " + row[1])
+                .toList();
+    }
+
+
 }

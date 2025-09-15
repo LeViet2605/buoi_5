@@ -100,4 +100,11 @@ public class TaskController {
         return ResponseEntity.ok(task);
     }
 
+    @GetMapping("/count-all")
+    public ResponseEntity<?> countAllTypes() {
+        return ResponseEntity.ok(Map.of("message", taskService.countTasksGroupByType()));
+    }
+
+
+
 }
