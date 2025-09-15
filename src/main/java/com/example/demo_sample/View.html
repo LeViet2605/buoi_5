@@ -451,33 +451,27 @@
 
     // ===== Count All Tasks =====
     document.getElementById("countAllBtn").addEventListener("click", async () => {
-        const res = await fetch(`${API_BASE}/tasks`, { // lấy tất cả tasks
+        const res = await fetch(`${API_BASE}/tasks/count-all`, {
             headers: { "Authorization": `Bearer ${accessToken}` }
         });
         const data = await res.json();
         const resultDiv = document.getElementById("countAllResult");
 
         if (res.ok) {
-            const tasks = data.content || data; // nếu có paging thì dùng content
-            const map = {};
-
-            tasks.forEach(task => {
-                const typeId = task.taskTypeId;
-                map[typeId] = (map[typeId] || 0) + 1;
-            });
-
-            let text = "";
-            for (let typeId = 1; typeId <= 4; typeId++) {
-                const count = map[typeId] || 0;
-                text += `TaskTypeId: ${typeId} - Count: ${count}\n`;
+            const message = data.message;
+            let text = "📊 Count All Status:\n";
+            if (Array.isArray(message)) {
+                text += message.join("\n");
+            } else {
+                for (const [typeId, count] of Object.entries(message)) {
+                    text += `TaskTypeId ${typeId}: ${count}\n`;
+                }
             }
-
             resultDiv.textContent = text;
         } else {
             resultDiv.textContent = data.error || "❌ Lỗi khi lấy thống kê";
         }
     });
-
 
     // ===== USERS (Admin only) =====
     async function loadUsers(){
