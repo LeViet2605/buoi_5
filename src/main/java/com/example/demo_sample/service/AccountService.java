@@ -3,10 +3,12 @@ package com.example.demo_sample.service;
 import com.example.demo_sample.domain.AccountEntity;
 import com.example.demo_sample.repository.AccountRepository;
 import com.example.demo_sample.JwtUtil;
+import com.example.demo_sample.util.LoginAttemptService;
 import com.example.demo_sample.util.TokenBlacklist;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -24,6 +26,8 @@ public class AccountService implements UserDetailsService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final TokenBlacklist tokenBlacklist;
+    private final LoginAttemptService loginAttemptService;
+
 
     @PostConstruct
     public void rehashPasswords() {
@@ -49,20 +53,35 @@ public class AccountService implements UserDetailsService {
 
     // --- Login ---
     public Map<String, String> login(String email, String rawPassword, AuthenticationManager authenticationManager) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(email, rawPassword)
-        );
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        // Kiểm tra xem user có bị khóa không
+        if (loginAttemptService.isBlocked(email)) {
+            throw new RuntimeException("Tài khoản bị khóa do đăng nhập sai quá nhiều lần. Vui lòng thử lại sau 1 phút.");
+        }
 
-        String accessToken = jwtUtil.generateAccessToken(userDetails.getUsername());
-        String refreshToken = jwtUtil.generateRefreshToken(userDetails.getUsername());
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(email, rawPassword)
+            );
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
-        Map<String, String> tokens = new HashMap<>();
-        tokens.put("accessToken", accessToken);
-        tokens.put("refreshToken", refreshToken);
-        tokens.put("email", userDetails.getUsername());
-        return tokens;
+            // Nếu đăng nhập thành công thì reset số lần thử
+            loginAttemptService.loginSucceeded(email);
+
+            String accessToken = jwtUtil.generateAccessToken(userDetails.getUsername());
+            String refreshToken = jwtUtil.generateRefreshToken(userDetails.getUsername());
+
+            Map<String, String> tokens = new HashMap<>();
+            tokens.put("accessToken", accessToken);
+            tokens.put("refreshToken", refreshToken);
+            tokens.put("email", userDetails.getUsername());
+            return tokens;
+        } catch (BadCredentialsException ex) {
+            // Nếu sai mật khẩu thì tăng số lần thử
+            loginAttemptService.loginFailed(email);
+            throw ex; // vẫn ném để controller xử lý
+        }
     }
+
 
     // --- Refresh Token ---
     public String refreshAccessToken(String refreshToken) {
