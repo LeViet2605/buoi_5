@@ -53,6 +53,13 @@ public class AccountService implements UserDetailsService {
 
     // --- Login ---
     public Map<String, String> login(String email, String rawPassword, AuthenticationManager authenticationManager) {
+        // Kiểm tra tài khoản có tồn tại không trước
+        Optional<AccountEntity> optionalAccount = accountRepository.findByEmail(email);
+        if (optionalAccount.isEmpty()) {
+            // Nếu không tồn tại thì báo rõ ràng
+            throw new UsernameNotFoundException("Tài khoản chưa tồn tại, vui lòng đăng ký");
+        }
+
         // Kiểm tra xem user có bị khóa không
         if (loginAttemptService.isBlocked(email)) {
             throw new RuntimeException("Tài khoản bị khóa do đăng nhập sai quá nhiều lần. Vui lòng thử lại sau 1 phút.");
@@ -76,11 +83,13 @@ public class AccountService implements UserDetailsService {
             tokens.put("email", userDetails.getUsername());
             return tokens;
         } catch (BadCredentialsException ex) {
-            // Nếu sai mật khẩu thì tăng số lần thử
+            // Nếu sai mật khẩu thì mới tăng số lần thử
             loginAttemptService.loginFailed(email);
-            throw ex; // vẫn ném để controller xử lý
+            throw ex;
         }
     }
+
+
 
 
     // --- Refresh Token ---

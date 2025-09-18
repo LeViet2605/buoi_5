@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,16 +42,19 @@ public class AccountController {
                     tokens.get("accessToken"),
                     tokens.get("refreshToken")
             ));
+        } catch (UsernameNotFoundException ex) {
+            // Nếu tài khoản chưa tồn tại
+            return ResponseEntity.status(404).body(new ErrorResponse(ex.getMessage()));
         } catch (BadCredentialsException ex) {
             return ResponseEntity.status(401).body(new ErrorResponse("Email hoặc mật khẩu không đúng"));
         } catch (RuntimeException ex) {
-            // Bắt lỗi khóa tài khoản
             if (ex.getMessage().contains("Tài khoản bị khóa")) {
                 return ResponseEntity.status(403).body(new ErrorResponse(ex.getMessage()));
             }
             return ResponseEntity.status(500).body(new ErrorResponse("Lỗi hệ thống"));
         }
     }
+
 
 
     // --- Refresh token ---
