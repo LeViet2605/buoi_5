@@ -7,9 +7,11 @@ import com.example.demo_sample.util.LoginAttemptService;
 import com.example.demo_sample.util.TokenBlacklist;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.*;
@@ -27,8 +29,9 @@ public class AccountService implements UserDetailsService {
     private final JwtUtil jwtUtil;
     private final TokenBlacklist tokenBlacklist;
     private final LoginAttemptService loginAttemptService;
+    private final AuthenticationConfiguration authenticationConfiguration;
 
-
+    // --- Rehash password khi DB chứa mật khẩu chưa mã hoá ---
     @PostConstruct
     public void rehashPasswords() {
         accountRepository.findAll().forEach(acc -> {
@@ -40,115 +43,127 @@ public class AccountService implements UserDetailsService {
     }
 
     // --- Register ---
-    public AccountEntity register(String email, String rawPassword) {
-        if (email == null || email.isEmpty()) throw new IllegalArgumentException("Email không được để trống");
-        if (rawPassword == null || rawPassword.isEmpty()) throw new IllegalArgumentException("Password không được để trống");
+    public ResponseEntity<?> register(String email, String password) {
+        if (email == null || email.isBlank())
+            return ResponseEntity.badRequest().body(Map.of("error", "Email không được để trống"));
+        if (password == null || password.isBlank())
+            return ResponseEntity.badRequest().body(Map.of("error", "Password không được để trống"));
+        if (accountRepository.findByEmail(email).isPresent())
+            return ResponseEntity.status(409).body(Map.of("error", "Email đã tồn tại"));
 
         AccountEntity account = new AccountEntity();
         account.setEmail(email);
-        account.setPassword(passwordEncoder.encode(rawPassword));
-        account.setRole("ROLE_USER"); // mặc định
-        return accountRepository.save(account);
+        account.setPassword(passwordEncoder.encode(password));
+        account.setRole("ROLE_USER");
+        accountRepository.save(account);
+
+        return ResponseEntity.status(201).body(Map.of("message", "Đăng ký thành công", "email", email));
     }
 
     // --- Login ---
-    public Map<String, String> login(String email, String rawPassword, AuthenticationManager authenticationManager) {
-        // Kiểm tra tài khoản có tồn tại không trước
-        Optional<AccountEntity> optionalAccount = accountRepository.findByEmail(email);
-        if (optionalAccount.isEmpty()) {
-            // Nếu không tồn tại thì báo rõ ràng
-            throw new UsernameNotFoundException("Tài khoản chưa tồn tại, vui lòng đăng ký");
-        }
+    public ResponseEntity<?> login(String email, String password) {
+        var optAcc = accountRepository.findByEmail(email);
+        if (optAcc.isEmpty())
+            return ResponseEntity.status(404).body(Map.of("error", "Tài khoản chưa tồn tại"));
 
-        // Kiểm tra xem user có bị khóa không
-        if (loginAttemptService.isBlocked(email)) {
-            throw new RuntimeException("Tài khoản bị khóa do đăng nhập sai quá nhiều lần. Vui lòng thử lại sau 1 phút.");
-        }
+        if (loginAttemptService.isBlocked(email))
+            return ResponseEntity.status(403).body(Map.of("error", "Bạn nhập sai mật khẩu quá 3 lần. Tài khoản tạm thời bị khoá, vui lòng thử lại sau 1 phút"));
 
         try {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(email, rawPassword)
+            AuthenticationManager authenticationManager = authenticationConfiguration.getAuthenticationManager();
+            Authentication auth = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(email, password)
             );
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
-            // Nếu đăng nhập thành công thì reset số lần thử
             loginAttemptService.loginSucceeded(email);
 
-            String accessToken = jwtUtil.generateAccessToken(userDetails.getUsername());
-            String refreshToken = jwtUtil.generateRefreshToken(userDetails.getUsername());
+            String accessToken = jwtUtil.generateAccessToken(email);
+            String refreshToken = jwtUtil.generateRefreshToken(email);
 
-            Map<String, String> tokens = new HashMap<>();
-            tokens.put("accessToken", accessToken);
-            tokens.put("refreshToken", refreshToken);
-            tokens.put("email", userDetails.getUsername());
-            return tokens;
-        } catch (BadCredentialsException ex) {
-            // Nếu sai mật khẩu thì mới tăng số lần thử
+            return ResponseEntity.ok(Map.of(
+                    "message", "Đăng nhập thành công",
+                    "email", email,
+                    "accessToken", accessToken,
+                    "refreshToken", refreshToken
+            ));
+        } catch (BadCredentialsException e) {
             loginAttemptService.loginFailed(email);
-            throw ex;
+            return ResponseEntity.status(401).body(Map.of("error", "Email hoặc mật khẩu không đúng"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Lỗi hệ thống"));
         }
     }
 
-
-
-
     // --- Refresh Token ---
-    public String refreshAccessToken(String refreshToken) {
-        if (refreshToken == null || refreshToken.isEmpty()) {
-            throw new IllegalArgumentException("Refresh Token không được để trống");
-        }
-
-        String username;
+    public ResponseEntity<?> refreshAccessToken(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank())
+            return ResponseEntity.badRequest().body(Map.of("error", "Refresh token trống"));
         try {
-            username = jwtUtil.extractUsername(refreshToken);
+            String username = jwtUtil.extractUsername(refreshToken);
+            if (!jwtUtil.isTokenValid(refreshToken, username))
+                return ResponseEntity.status(401).body(Map.of("error", "Refresh token không hợp lệ"));
+
+            String newAccessToken = jwtUtil.generateAccessToken(username);
+            return ResponseEntity.ok(Map.of("accessToken", newAccessToken));
         } catch (Exception e) {
-            throw new IllegalArgumentException("Refresh Token không hợp lệ");
+            return ResponseEntity.status(401).body(Map.of("error", "Refresh token không hợp lệ"));
         }
-
-        if (!jwtUtil.isTokenValid(refreshToken, username)) {
-            throw new IllegalArgumentException("Refresh Token không hợp lệ hoặc đã hết hạn");
-        }
-
-        UserDetails userDetails = loadUserByUsername(username);
-        return jwtUtil.generateAccessToken(userDetails.getUsername());
     }
 
     // --- Logout ---
-    public void logout(String token) {
-        if (token == null || token.isEmpty()) {
-            throw new IllegalArgumentException("Token không tồn tại");
-        }
+    public ResponseEntity<?> logout(String token) {
+        if (token == null || token.isBlank())
+            return ResponseEntity.badRequest().body(Map.of("error", "Token không tồn tại"));
+
         tokenBlacklist.add(token);
+        return ResponseEntity.ok(Map.of("message", "Đăng xuất thành công"));
     }
 
-    // --- Update ---
-    public AccountEntity updateAccount(Long id, String email, String rawPassword) {
-        AccountEntity account = accountRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+    // --- Update account ---
+    public ResponseEntity<?> updateAccount(Long id, String email, String rawPassword) {
+        Optional<AccountEntity> optAcc = accountRepository.findById(id);
+        if (optAcc.isEmpty())
+            return ResponseEntity.status(404).body(Map.of("error", "Không tìm thấy user"));
+
+        AccountEntity account = optAcc.get();
         account.setEmail(email);
-        if (rawPassword != null && !rawPassword.isEmpty()) {
+        if (rawPassword != null && !rawPassword.isBlank()) {
             account.setPassword(passwordEncoder.encode(rawPassword));
         }
-        return accountRepository.save(account);
-    }
-
-    // --- Delete ---
-    public void deleteAccount(Long id) {
-        if (!accountRepository.existsById(id)) {
-            throw new RuntimeException("Không tìm thấy user");
-        }
-        accountRepository.deleteById(id);
+        accountRepository.save(account);
+        return ResponseEntity.ok(Map.of("message", "Cập nhật tài khoản thành công", "id", id, "email", email));
     }
 
     // --- Get by ID ---
-    public AccountEntity getAccount(Long id) {
+    public ResponseEntity<?> getAccount(Long id) {
         return accountRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(404).body(Map.of("error", "Không tìm thấy user")));
     }
 
-    // --- Get all ---
-    public List<AccountEntity> getAllAccounts() {
-        return accountRepository.findAll();
+    // --- Get all accounts ---
+    public ResponseEntity<?> getAllAccountsResponse() {
+        List<AccountEntity> accounts = accountRepository.findAll();
+        return ResponseEntity.ok(accounts);
+    }
+
+    // --- Delete account ---
+    public ResponseEntity<?> deleteAccountResponse(Long id, Authentication authentication) {
+        if (authentication == null)
+            return ResponseEntity.status(401).body(Map.of("error", "Bạn chưa đăng nhập"));
+
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .map(a -> a.getAuthority())
+                .anyMatch(r -> r.equals("ROLE_ADMIN"));
+
+        if (!isAdmin)
+            return ResponseEntity.status(403).body(Map.of("error", "Bạn không có quyền xóa tài khoản"));
+
+        if (!accountRepository.existsById(id))
+            return ResponseEntity.status(404).body(Map.of("error", "User không tồn tại"));
+
+        accountRepository.deleteById(id);
+        return ResponseEntity.ok(Map.of("message", "Xóa tài khoản thành công"));
     }
 
     // --- Spring Security ---
@@ -156,12 +171,10 @@ public class AccountService implements UserDetailsService {
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         AccountEntity account = accountRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy tài khoản: " + email));
-
         return new org.springframework.security.core.userdetails.User(
                 account.getEmail(),
                 account.getPassword(),
                 Collections.singletonList(new SimpleGrantedAuthority(account.getRole()))
         );
     }
-
 }

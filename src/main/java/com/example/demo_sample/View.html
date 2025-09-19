@@ -232,8 +232,12 @@
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ email, password })
         });
-        if (res.ok) alert("Đăng ký thành công!");
-        else alert("Đăng ký thất bại!");
+        const data = await res.json(); // <-- đọc JSON từ backend
+        if (res.ok) {
+            alert(data.message || "Đăng ký thành công!");
+        } else {
+            alert(data.error || "Đăng ký thất bại!");
+        }
     });
 
     // ===== LOGIN =====
