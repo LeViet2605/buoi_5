@@ -1,8 +1,5 @@
 package com.example.demo_sample.service.Impl;
 
-
-
-
 import com.example.demo_sample.domain.TaskEntity;
 import com.example.demo_sample.domain.dto.CreateTaskDTO;
 import com.example.demo_sample.domain.dto.UpdateTaskDTO;
@@ -12,11 +9,13 @@ import io.jsonwebtoken.lang.Assert;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,40 +28,49 @@ public class TaskServiceImpl implements TaskService {
         this.taskRepository = taskRepository;
     }
 
-    //    Sử dụng bean
     @Override
-    public TaskEntity getById(Integer id) {
-        return taskRepository.findById(id).orElse(null);
+    public ResponseEntity<?> getById(Integer id) {
+        TaskEntity task = taskRepository.findById(id).orElse(null);
+        if (task == null) {
+            return ResponseEntity.status(404).body(Map.of("error", "Task không tồn tại"));
+        }
+        return ResponseEntity.ok(task);
     }
 
     @Override
-    public TaskEntity create(CreateTaskDTO data) {
-        Assert.notNull(data, "cannot be null");
-        TaskEntity newTaskEntity = convertFrom(data);
-        return taskRepository.save(newTaskEntity); // sẽ có id
-    }
+    public ResponseEntity<?> create(CreateTaskDTO data) {
+        Map<String, String> errorMap = data.validate();
+        if (!errorMap.isEmpty()) {
+            return ResponseEntity.badRequest().body(errorMap);
+        }
 
-    public TaskEntity convertFrom(CreateTaskDTO data) {
-        TaskEntity taskEntity = new TaskEntity();
-        taskEntity.setRequirementName(data.getRequirementName());
-        taskEntity.setTaskTypeId(data.getTaskTypeId());
-        taskEntity.setDate(data.getDate());
-        taskEntity.setPlanFrom(data.getPlanFrom());
-        taskEntity.setPlanTo(data.getPlanTo());
-        taskEntity.setAssignee(data.getAssignee());
-        taskEntity.setReviewer(data.getReviewer());
-        return taskEntity;
+        TaskEntity newTaskEntity = new TaskEntity();
+        newTaskEntity.setRequirementName(data.getRequirementName());
+        newTaskEntity.setTaskTypeId(data.getTaskTypeId());
+        newTaskEntity.setDate(data.getDate());
+        newTaskEntity.setPlanFrom(data.getPlanFrom());
+        newTaskEntity.setPlanTo(data.getPlanTo());
+        newTaskEntity.setAssignee(data.getAssignee());
+        newTaskEntity.setReviewer(data.getReviewer());
+
+        TaskEntity created = taskRepository.save(newTaskEntity);
+
+        return ResponseEntity.status(201).body(Map.of(
+                "message", "Tạo task thành công",
+                "id Task", created.getTaskId()
+        ));
     }
 
     @Override
-    public void update(Integer id, UpdateTaskDTO data) {
-        Assert.notNull(id, "ID không được null");
-        Assert.notNull(data, "Dữ liệu không được null");
+    public ResponseEntity<?> update(Integer id, UpdateTaskDTO data) {
+        Map<String, String> errorMap = data.validate();
+        if (!errorMap.isEmpty()) {
+            return ResponseEntity.badRequest().body(errorMap);
+        }
 
         TaskEntity existing = taskRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task không tồn tại"));
 
-        // Giả sử bạn đã có các setter
         existing.setRequirementName(data.getRequirementName());
         existing.setTaskTypeId(data.getTaskTypeId());
         existing.setDate(data.getDate());
@@ -73,38 +81,42 @@ public class TaskServiceImpl implements TaskService {
         existing.setUpdatedAt(LocalDateTime.now());
 
         taskRepository.save(existing);
+
+        return ResponseEntity.ok(Map.of("message", "Update task thành công"));
     }
 
-
     @Override
-    public void delete(Integer id) {
-        Assert.notNull(id, "id cannot be null");
+    public ResponseEntity<?> delete(Integer id, Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Bạn chưa đăng nhập"));
+        }
+
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(role -> role.equals("ROLE_ADMIN"));
+
+        if (!isAdmin) {
+            return ResponseEntity.status(403).body(Map.of("error", "Bạn không có quyền xóa task"));
+        }
 
         TaskEntity taskEntity = taskRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         taskRepository.delete(taskEntity);
+
+        return ResponseEntity.ok(Map.of("message", "Xóa Task thành công"));
     }
 
     @Override
-    public Page<TaskEntity> paginate(Pageable pageable) {
-        return taskRepository.findAll(pageable);
-    }
-
-
-    @Override
-    public List<String> countTasksGroupByType() {
-        List<Object[]> results = taskRepository.countTasksGroupByType();
-        return results.stream()
-                .map(row -> "TaskTypeId: " + row[0] + " - Count: " + row[1])
-                .toList();
+    public ResponseEntity<?> paginate(Pageable pageable) {
+        Page<TaskEntity> tasks = taskRepository.findAll(pageable);
+        return ResponseEntity.ok(tasks);
     }
 
     @Override
-    public Page<TaskEntity> search(Integer id, Integer taskTypeId, String requirementName, Pageable pageable) {
-        return taskRepository.findAll((root, query, cb) -> {
-            // danh sách điều kiện
-            var predicates = new java.util.ArrayList<>();
+    public ResponseEntity<?> search(Integer id, Integer taskTypeId, String requirementName, Pageable pageable) {
+        Page<TaskEntity> tasks = taskRepository.findAll((root, query, cb) -> {
+            var predicates = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
 
             if (id != null) {
                 predicates.add(cb.equal(root.get("taskId"), id));
@@ -118,8 +130,19 @@ public class TaskServiceImpl implements TaskService {
 
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         }, pageable);
+
+        if (tasks.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of("error", "Không tìm thấy task nào"));
+        }
+        return ResponseEntity.ok(tasks);
     }
 
-
-
+    @Override
+    public ResponseEntity<?> countAllTypes() {
+        List<Object[]> results = taskRepository.countTasksGroupByType();
+        List<String> mapped = results.stream()
+                .map(row -> "TaskTypeId: " + row[0] + " - Count: " + row[1])
+                .toList();
+        return ResponseEntity.ok(Map.of("message", mapped));
+    }
 }

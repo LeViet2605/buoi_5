@@ -1,30 +1,24 @@
 package com.example.demo_sample.service;
 
-import com.example.demo_sample.domain.TaskEntity;
 import com.example.demo_sample.domain.dto.CreateTaskDTO;
 import com.example.demo_sample.domain.dto.UpdateTaskDTO;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-
-import java.util.List;
-import java.util.Map;
-
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 
 public interface TaskService {
 
-    public Page<TaskEntity> paginate(Pageable pageable);
+    ResponseEntity<?> getById(Integer id);
 
-    public TaskEntity getById(Integer id);
+    ResponseEntity<?> create(CreateTaskDTO data);
 
-    public TaskEntity create(CreateTaskDTO data);
+    ResponseEntity<?> update(Integer id, UpdateTaskDTO data);
 
-    public void update(Integer id, UpdateTaskDTO data);
+    ResponseEntity<?> delete(Integer id, Authentication authentication);
 
-    public void delete(Integer id);
+    ResponseEntity<?> paginate(Pageable pageable);
 
-    public List<String> countTasksGroupByType();
+    ResponseEntity<?> search(Integer id, Integer taskTypeId, String requirementName, Pageable pageable);
 
-    public Page<TaskEntity> search(Integer id, Integer taskTypeId, String requirementName, Pageable pageable);
-
+    ResponseEntity<?> countAllTypes();
 }
-
