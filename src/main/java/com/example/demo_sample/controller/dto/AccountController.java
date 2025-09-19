@@ -40,11 +40,10 @@ public class AccountController {
 
 //    chưa dùng
     @GetMapping
-    public ResponseEntity<?> getAllAccounts() {
-        return accountService.getAllAccountsResponse();
+    public ResponseEntity<?> getAllAccounts(Authentication authentication) {
+        return accountService.getAllAccountsResponse(authentication);
     }
 
-//    chưa dùng
     @GetMapping("/{id}")
     public ResponseEntity<?> getAccountById(@PathVariable Long id) {
         return accountService.getAccount(id);

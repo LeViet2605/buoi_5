@@ -141,11 +141,24 @@ public class AccountService implements UserDetailsService {
                 .orElseGet(() -> ApiResponse.error(CommonErrorCode.USER_NOT_FOUND, 404));
     }
 
-    // --- Get all accounts ---
-    public ResponseEntity<?> getAllAccountsResponse() {
+    // --- Get all accounts (chỉ admin) ---
+    public ResponseEntity<?> getAllAccountsResponse(Authentication authentication) {
+        if (authentication == null) {
+            return ApiResponse.error(CommonErrorCode.UNAUTHORIZED, 401);
+        }
+
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .map(a -> a.getAuthority())
+                .anyMatch(r -> r.equals("ROLE_ADMIN"));
+
+        if (!isAdmin) {
+            return ApiResponse.error(CommonErrorCode.FORBIDDEN, 403);
+        }
+
         List<AccountEntity> accounts = accountRepository.findAll();
         return ApiResponse.success(CommonErrorCode.ALL_ACCOUNT, accounts);
     }
+
 
     // --- Delete account ---
     public ResponseEntity<?> deleteAccountResponse(Long id, Authentication authentication) {
