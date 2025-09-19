@@ -252,24 +252,25 @@
         });
         const data = await res.json();
         if (res.ok) {
-            accessToken = data.accessToken;
-            isAdmin = data.email.toLowerCase() === "admin@gmail.com";
+            // fix: đọc token và email đúng
+            accessToken = data.data.accessToken;
+            isAdmin = data.data.email.toLowerCase() === "admin@gmail.com";
 
             authScreen.classList.add("hidden");
             mainScreen.classList.remove("hidden");
 
-            if (isAdmin) {
-                userTabBtn.classList.remove("hidden");
-            } else {
+            if (isAdmin) userTabBtn.classList.remove("hidden");
+            else {
                 userTabBtn.classList.add("hidden");
                 userTab.classList.add("hidden");
             }
 
             loadTasks();
         } else {
-            alert(data.error || "Đăng nhập thất bại");
+            alert(data.message || data.error || "Đăng nhập thất bại");
         }
     });
+
 
     // ===== LOGOUT =====
     document.getElementById("logoutBtn").addEventListener("click", async () => {
@@ -482,20 +483,25 @@
         try {
             const res = await fetch(`${API_BASE}/account`, { headers:{ "Authorization": `Bearer ${accessToken}` } });
             if(!res.ok) throw new Error("Lấy danh sách user thất bại");
-            const users = await res.json();
+
+            const result = await res.json();
+            const users = Array.isArray(result.data) ? result.data : [];
+
             userList.innerHTML = users.map(u => `
-                <div class="user">
-                    <b>ID:</b> ${u.id} <br>
-                    <b>Email:</b> ${u.email} <br>
-                    <div class="user-actions">
-                        <button onclick="deleteUser(${u.id})">🗑️ Xóa</button>
-                    </div>
+            <div class="user">
+                <b>ID:</b> ${u.id} <br>
+                <b>Email:</b> ${u.email} <br>
+                <div class="user-actions">
+                    <button onclick="deleteUser(${u.id})">🗑️ Xóa</button>
                 </div>
-            `).join("");
+            </div>
+        `).join("");
+
         } catch(err) {
             userList.innerHTML = `<p style="color:red;">${err.message}</p>`;
         }
     }
+
 
     async function deleteUser(id){
         if(!confirm("Bạn có chắc muốn xóa user này?")) return;
