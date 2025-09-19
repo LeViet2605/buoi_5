@@ -1,11 +1,12 @@
 package com.example.demo_sample.service.Impl;
 
+import com.example.demo_sample.Common.ApiResponse;
+import com.example.demo_sample.Common.CommonErrorCode;
 import com.example.demo_sample.domain.TaskEntity;
 import com.example.demo_sample.domain.dto.CreateTaskDTO;
 import com.example.demo_sample.domain.dto.UpdateTaskDTO;
 import com.example.demo_sample.repository.TaskRepository;
 import com.example.demo_sample.service.TaskService;
-import io.jsonwebtoken.lang.Assert;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -32,7 +33,7 @@ public class TaskServiceImpl implements TaskService {
     public ResponseEntity<?> getById(Integer id) {
         TaskEntity task = taskRepository.findById(id).orElse(null);
         if (task == null) {
-            return ResponseEntity.status(404).body(Map.of("error", "Task không tồn tại"));
+            return ApiResponse.error(CommonErrorCode.TASK_NOT_FOUND, 404);
         }
         return ResponseEntity.ok(task);
     }
@@ -55,10 +56,8 @@ public class TaskServiceImpl implements TaskService {
 
         TaskEntity created = taskRepository.save(newTaskEntity);
 
-        return ResponseEntity.status(201).body(Map.of(
-                "message", "Tạo task thành công",
-                "id Task", created.getTaskId()
-        ));
+        return ApiResponse.successCreated(CommonErrorCode.CREATE_TASK_SUCCESS,
+                Map.of("id Task", created.getTaskId()));
     }
 
     @Override
@@ -69,7 +68,7 @@ public class TaskServiceImpl implements TaskService {
         }
 
         TaskEntity existing = taskRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task không tồn tại"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, CommonErrorCode.TASK_NOT_FOUND.getMessage()));
 
         existing.setRequirementName(data.getRequirementName());
         existing.setTaskTypeId(data.getTaskTypeId());
@@ -82,13 +81,13 @@ public class TaskServiceImpl implements TaskService {
 
         taskRepository.save(existing);
 
-        return ResponseEntity.ok(Map.of("message", "Update task thành công"));
+        return ApiResponse.success(CommonErrorCode.UPDATE_TASK_SUCCESS, null);
     }
 
     @Override
     public ResponseEntity<?> delete(Integer id, Authentication authentication) {
         if (authentication == null) {
-            return ResponseEntity.status(401).body(Map.of("error", "Bạn chưa đăng nhập"));
+            return ApiResponse.error(CommonErrorCode.UNAUTHORIZED, 401);
         }
 
         boolean isAdmin = authentication.getAuthorities().stream()
@@ -96,15 +95,15 @@ public class TaskServiceImpl implements TaskService {
                 .anyMatch(role -> role.equals("ROLE_ADMIN"));
 
         if (!isAdmin) {
-            return ResponseEntity.status(403).body(Map.of("error", "Bạn không có quyền xóa task"));
+            return ApiResponse.error(CommonErrorCode.FORBIDDEN, 403);
         }
 
         TaskEntity taskEntity = taskRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, CommonErrorCode.TASK_NOT_FOUND.getMessage()));
 
         taskRepository.delete(taskEntity);
 
-        return ResponseEntity.ok(Map.of("message", "Xóa Task thành công"));
+        return ApiResponse.success(CommonErrorCode.DELETE_TASK_SUCCESS, null);
     }
 
     @Override
@@ -132,7 +131,7 @@ public class TaskServiceImpl implements TaskService {
         }, pageable);
 
         if (tasks.isEmpty()) {
-            return ResponseEntity.status(404).body(Map.of("error", "Không tìm thấy task nào"));
+            return ApiResponse.error(CommonErrorCode.TASKS_NOT_FOUND, 404);
         }
         return ResponseEntity.ok(tasks);
     }
