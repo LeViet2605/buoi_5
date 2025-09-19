@@ -1,5 +1,7 @@
 package com.example.demo_sample.service;
 
+import com.example.demo_sample.Common.ApiResponse;
+import com.example.demo_sample.Common.CommonErrorCode;
 import com.example.demo_sample.domain.AccountEntity;
 import com.example.demo_sample.repository.AccountRepository;
 import com.example.demo_sample.JwtUtil;
@@ -45,11 +47,11 @@ public class AccountService implements UserDetailsService {
     // --- Register ---
     public ResponseEntity<?> register(String email, String password) {
         if (email == null || email.isBlank())
-            return ResponseEntity.badRequest().body(Map.of("error", "Email không được để trống"));
+            return ApiResponse.error(CommonErrorCode.EMAIL_EMPTY, 400);
         if (password == null || password.isBlank())
-            return ResponseEntity.badRequest().body(Map.of("error", "Password không được để trống"));
+            return ApiResponse.error(CommonErrorCode.PASSWORD_EMPTY, 400);
         if (accountRepository.findByEmail(email).isPresent())
-            return ResponseEntity.status(409).body(Map.of("error", "Email đã tồn tại"));
+            return ApiResponse.error(CommonErrorCode.EMAIL_EXISTS, 409);
 
         AccountEntity account = new AccountEntity();
         account.setEmail(email);
@@ -57,17 +59,17 @@ public class AccountService implements UserDetailsService {
         account.setRole("ROLE_USER");
         accountRepository.save(account);
 
-        return ResponseEntity.status(201).body(Map.of("message", "Đăng ký thành công", "email", email));
+        return ApiResponse.successCreated(CommonErrorCode.REGISTER_SUCCESS, Map.of("email", email));
     }
 
     // --- Login ---
     public ResponseEntity<?> login(String email, String password) {
         var optAcc = accountRepository.findByEmail(email);
         if (optAcc.isEmpty())
-            return ResponseEntity.status(404).body(Map.of("error", "Tài khoản chưa tồn tại"));
+            return ApiResponse.error(CommonErrorCode.ACCOUNT_NOT_FOUND, 404);
 
         if (loginAttemptService.isBlocked(email))
-            return ResponseEntity.status(403).body(Map.of("error", "Bạn nhập sai mật khẩu quá 3 lần. Tài khoản tạm thời bị khoá, vui lòng thử lại sau 1 phút"));
+            return ApiResponse.error(CommonErrorCode.ACCOUNT_LOCKED, 403);
 
         try {
             AuthenticationManager authenticationManager = authenticationConfiguration.getAuthenticationManager();
@@ -80,50 +82,47 @@ public class AccountService implements UserDetailsService {
             String accessToken = jwtUtil.generateAccessToken(email);
             String refreshToken = jwtUtil.generateRefreshToken(email);
 
-            return ResponseEntity.ok(Map.of(
-                    "message", "Đăng nhập thành công",
-                    "email", email,
-                    "accessToken", accessToken,
-                    "refreshToken", refreshToken
-            ));
+            return ApiResponse.success(CommonErrorCode.LOGIN_SUCCESS,
+                    Map.of("email", email, "accessToken", accessToken, "refreshToken", refreshToken));
+
         } catch (BadCredentialsException e) {
             loginAttemptService.loginFailed(email);
-            return ResponseEntity.status(401).body(Map.of("error", "Email hoặc mật khẩu không đúng"));
+            return ApiResponse.error(CommonErrorCode.BAD_CREDENTIALS, 401);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", "Lỗi hệ thống"));
+            return ApiResponse.error(CommonErrorCode.INTERNAL_ERROR, 500);
         }
     }
 
     // --- Refresh Token ---
     public ResponseEntity<?> refreshAccessToken(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank())
-            return ResponseEntity.badRequest().body(Map.of("error", "Refresh token trống"));
+            return ApiResponse.error(CommonErrorCode.REFRESH_TOKEN_EMPTY, 400);
         try {
             String username = jwtUtil.extractUsername(refreshToken);
             if (!jwtUtil.isTokenValid(refreshToken, username))
-                return ResponseEntity.status(401).body(Map.of("error", "Refresh token không hợp lệ"));
+                return ApiResponse.error(CommonErrorCode.REFRESH_TOKEN_INVALID, 401);
 
             String newAccessToken = jwtUtil.generateAccessToken(username);
-            return ResponseEntity.ok(Map.of("accessToken", newAccessToken));
+            return ApiResponse.success(CommonErrorCode.LOGIN_SUCCESS, Map.of("accessToken", newAccessToken));
         } catch (Exception e) {
-            return ResponseEntity.status(401).body(Map.of("error", "Refresh token không hợp lệ"));
+            return ApiResponse.error(CommonErrorCode.REFRESH_TOKEN_INVALID, 401);
         }
     }
 
     // --- Logout ---
     public ResponseEntity<?> logout(String token) {
         if (token == null || token.isBlank())
-            return ResponseEntity.badRequest().body(Map.of("error", "Token không tồn tại"));
+            return ApiResponse.error(CommonErrorCode.TOKEN_EMPTY, 400);
 
         tokenBlacklist.add(token);
-        return ResponseEntity.ok(Map.of("message", "Đăng xuất thành công"));
+        return ApiResponse.success(CommonErrorCode.LOGOUT_SUCCESS, null);
     }
 
     // --- Update account ---
     public ResponseEntity<?> updateAccount(Long id, String email, String rawPassword) {
         Optional<AccountEntity> optAcc = accountRepository.findById(id);
         if (optAcc.isEmpty())
-            return ResponseEntity.status(404).body(Map.of("error", "Không tìm thấy user"));
+            return ApiResponse.error(CommonErrorCode.USER_NOT_FOUND, 404);
 
         AccountEntity account = optAcc.get();
         account.setEmail(email);
@@ -131,39 +130,40 @@ public class AccountService implements UserDetailsService {
             account.setPassword(passwordEncoder.encode(rawPassword));
         }
         accountRepository.save(account);
-        return ResponseEntity.ok(Map.of("message", "Cập nhật tài khoản thành công", "id", id, "email", email));
+        return ApiResponse.success(CommonErrorCode.UPDATE_ACCOUNT_SUCCESS,
+                Map.of("id", id, "email", email));
     }
 
     // --- Get by ID ---
     public ResponseEntity<?> getAccount(Long id) {
         return accountRepository.findById(id)
-                .<ResponseEntity<?>>map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.status(404).body(Map.of("error", "Không tìm thấy user")));
+                .<ResponseEntity<?>>map(acc -> ApiResponse.success(CommonErrorCode.LOGIN_SUCCESS, acc))
+                .orElseGet(() -> ApiResponse.error(CommonErrorCode.USER_NOT_FOUND, 404));
     }
 
     // --- Get all accounts ---
     public ResponseEntity<?> getAllAccountsResponse() {
         List<AccountEntity> accounts = accountRepository.findAll();
-        return ResponseEntity.ok(accounts);
+        return ApiResponse.success(CommonErrorCode.LOGIN_SUCCESS, accounts);
     }
 
     // --- Delete account ---
     public ResponseEntity<?> deleteAccountResponse(Long id, Authentication authentication) {
         if (authentication == null)
-            return ResponseEntity.status(401).body(Map.of("error", "Bạn chưa đăng nhập"));
+            return ApiResponse.error(CommonErrorCode.UNAUTHORIZED, 401);
 
         boolean isAdmin = authentication.getAuthorities().stream()
                 .map(a -> a.getAuthority())
                 .anyMatch(r -> r.equals("ROLE_ADMIN"));
 
         if (!isAdmin)
-            return ResponseEntity.status(403).body(Map.of("error", "Bạn không có quyền xóa tài khoản"));
+            return ApiResponse.error(CommonErrorCode.FORBIDDEN, 403);
 
         if (!accountRepository.existsById(id))
-            return ResponseEntity.status(404).body(Map.of("error", "User không tồn tại"));
+            return ApiResponse.error(CommonErrorCode.USER_NOT_FOUND, 404);
 
         accountRepository.deleteById(id);
-        return ResponseEntity.ok(Map.of("message", "Xóa tài khoản thành công"));
+        return ApiResponse.success(CommonErrorCode.DELETE_ACCOUNT_SUCCESS, null);
     }
 
     // --- Spring Security ---
