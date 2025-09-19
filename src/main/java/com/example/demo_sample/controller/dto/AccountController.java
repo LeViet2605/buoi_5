@@ -58,6 +58,7 @@ public class AccountController {
         return accountService.deleteAccountResponse(id, authentication);
     }
 
+
     // --- DTOs ---
     public record LoginRequest(String email, String password) {}
     public record UpdateRequest(String email, String password) {}
