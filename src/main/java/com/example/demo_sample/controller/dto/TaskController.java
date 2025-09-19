@@ -57,12 +57,6 @@ public class TaskController {
         return ResponseEntity.ok(Map.of("message", "Update task thành công"));
     }
 
-//    @DeleteMapping("/{id}")
-//    public void deleteTask(@PathVariable Integer id,  Authentication authentication) {
-//        taskService.delete(id);
-//    }
-
-
 
      @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteTask(
