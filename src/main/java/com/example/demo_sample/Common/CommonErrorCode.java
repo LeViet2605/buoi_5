@@ -32,7 +32,8 @@ public enum CommonErrorCode {
     DELETE_ACCOUNT_SUCCESS("MSG_005", "Xóa tài khoản thành công"),
     CREATE_TASK_SUCCESS("MSG_006", "Tạo task thành công"),
     UPDATE_TASK_SUCCESS("MSG_007", "Update task thành công"),
-    DELETE_TASK_SUCCESS("MSG_008", "Xóa Task thành công");
+    DELETE_TASK_SUCCESS("MSG_008", "Xóa Task thành công"),
+    ALL_ACCOUNT("MSG_009", "Tất cả các account");
 
     private final String code;
     private final String message;

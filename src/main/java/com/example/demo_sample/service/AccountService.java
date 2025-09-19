@@ -144,7 +144,7 @@ public class AccountService implements UserDetailsService {
     // --- Get all accounts ---
     public ResponseEntity<?> getAllAccountsResponse() {
         List<AccountEntity> accounts = accountRepository.findAll();
-        return ApiResponse.success(CommonErrorCode.LOGIN_SUCCESS, accounts);
+        return ApiResponse.success(CommonErrorCode.ALL_ACCOUNT, accounts);
     }
 
     // --- Delete account ---
