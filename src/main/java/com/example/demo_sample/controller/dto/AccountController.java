@@ -38,16 +38,19 @@ public class AccountController {
         return accountService.logout(token);
     }
 
+//    chưa dùng
     @GetMapping
     public ResponseEntity<?> getAllAccounts() {
         return accountService.getAllAccountsResponse();
     }
 
+//    chưa dùng
     @GetMapping("/{id}")
     public ResponseEntity<?> getAccountById(@PathVariable Long id) {
         return accountService.getAccount(id);
     }
 
+//     chưa dùng
     @PutMapping("/{id}")
     public ResponseEntity<?> updateAccount(@PathVariable Long id, @RequestBody UpdateRequest request) {
         return accountService.updateAccount(id, request.email(), request.password());
