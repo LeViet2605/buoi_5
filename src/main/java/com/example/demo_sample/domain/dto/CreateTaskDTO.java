@@ -1,5 +1,6 @@
 package com.example.demo_sample.domain.dto;
 
+import com.example.demo_sample.Common.TaskTypeStatus;
 import lombok.Data;
 import org.springframework.util.StringUtils;
 
@@ -33,8 +34,8 @@ public class CreateTaskDTO {
             errors.put("reviewer", "Reviewer không được để trống");
         }
 
-        if (taskTypeId == null || taskTypeId < 1 || taskTypeId > 4) {
-            errors.put("taskTypeId", "TaskTypeID phải từ 1 đến 4");
+        if (taskTypeId == null || !TaskTypeStatus.getAllStatusValues().contains(taskTypeId)) {
+            errors.put("taskTypeId", "TaskTypeID phải nằm trong khoảng hợp lệ");
         }
 
         if (date == null) {

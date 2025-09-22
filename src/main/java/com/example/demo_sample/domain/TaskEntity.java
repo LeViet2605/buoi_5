@@ -1,5 +1,6 @@
 package com.example.demo_sample.domain;
 
+import com.example.demo_sample.Common.TaskTypeStatus;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -46,4 +47,10 @@ public class TaskEntity {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt = LocalDateTime.now();
+
+
+    // Helper method để lấy tên từ constant
+    public String getTaskTypeName() {
+        return TaskTypeStatus.getStatusName(this.taskTypeId);
+    }
 }
