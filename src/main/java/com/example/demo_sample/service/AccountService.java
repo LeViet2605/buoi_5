@@ -82,8 +82,15 @@ public class AccountService implements UserDetailsService {
             String accessToken = jwtUtil.generateAccessToken(email);
             String refreshToken = jwtUtil.generateRefreshToken(email);
 
+            AccountEntity account = optAcc.get();
+
             return ApiResponse.success(CommonErrorCode.LOGIN_SUCCESS,
-                    Map.of("email", email, "accessToken", accessToken, "refreshToken", refreshToken));
+                    Map.of(
+
+                            "id", account.getId(),
+                            "email", email,
+                            "accessToken", accessToken,
+                            "refreshToken", refreshToken));
 
         } catch (BadCredentialsException e) {
             loginAttemptService.loginFailed(email);
