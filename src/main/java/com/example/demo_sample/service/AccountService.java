@@ -84,13 +84,14 @@ public class AccountService implements UserDetailsService {
 
             AccountEntity account = optAcc.get();
 
-            return ApiResponse.success(CommonErrorCode.LOGIN_SUCCESS,
-                    Map.of(
+            // ✅ Dùng LinkedHashMap để giữ thứ tự key
+            Map<String, Object> responseData = new LinkedHashMap<>();
+            responseData.put("id", account.getId());
+            responseData.put("email", email);
+            responseData.put("accessToken", accessToken);
+            responseData.put("refreshToken", refreshToken);
 
-                            "id", account.getId(),
-                            "email", email,
-                            "accessToken", accessToken,
-                            "refreshToken", refreshToken));
+            return ApiResponse.success(CommonErrorCode.LOGIN_SUCCESS, responseData);
 
         } catch (BadCredentialsException e) {
             loginAttemptService.loginFailed(email);
