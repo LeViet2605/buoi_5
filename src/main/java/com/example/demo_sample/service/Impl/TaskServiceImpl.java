@@ -2,6 +2,7 @@ package com.example.demo_sample.service.Impl;
 
 import com.example.demo_sample.Common.ApiResponse;
 import com.example.demo_sample.Common.CommonErrorCode;
+import com.example.demo_sample.Common.TaskTypeStatus;
 import com.example.demo_sample.domain.TaskEntity;
 import com.example.demo_sample.domain.dto.CreateTaskDTO;
 import com.example.demo_sample.domain.dto.UpdateTaskDTO;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -138,10 +140,22 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public ResponseEntity<?> countAllTypes() {
-        List<Object[]> results = taskRepository.countTasksGroupByType();
-        List<String> mapped = results.stream()
-                .map(row -> "TaskTypeId: " + row[0] + " - Count: " + row[1])
+        List<Object[]> rawResults = taskRepository.countTasksGroupByType();
+
+        List<Map<String, Object>> results = rawResults.stream()
+                .map(row -> {
+                    Integer typeId = ((Number) row[0]).intValue(); // ép an toàn
+                    Long count = ((Number) row[1]).longValue();
+
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("typeId", typeId);
+                    map.put("typeName", TaskTypeStatus.getStatusName(typeId));
+                    map.put("count", count);
+                    return map;
+                })
                 .toList();
-        return ResponseEntity.ok(Map.of("message", mapped));
+
+        return ResponseEntity.ok(results);
     }
+
 }

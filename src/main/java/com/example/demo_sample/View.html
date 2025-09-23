@@ -463,17 +463,17 @@
         const resultDiv = document.getElementById("countAllResult");
 
         if (res.ok) {
-            const message = data.message;
             let text = "📊 Count All Status:\n";
-            if (Array.isArray(message)) {
-                text += message.join("\n");
+            if (Array.isArray(data)) {
+                data.forEach(item => {
+                    text += `TypeId ${item.typeId} (${item.typeName}): Count ${item.count}\n`;
+                });
             } else {
-                for (const [typeId, count] of Object.entries(message)) {
-                    text += `TaskTypeId ${typeId}: ${count}\n`;
-                }
+                text += "❌ Dữ liệu trả về không đúng dạng mảng";
             }
             resultDiv.textContent = text;
-        } else {
+        }
+        else {
             resultDiv.textContent = data.error || "❌ Lỗi khi lấy thống kê";
         }
     });
