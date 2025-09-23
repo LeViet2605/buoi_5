@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 @Setter
 public class TaskEntity {
 
+//    Id tự sinh
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "task_id")
