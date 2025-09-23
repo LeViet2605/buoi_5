@@ -5,6 +5,7 @@ import com.example.demo_sample.Common.CommonErrorCode;
 import com.example.demo_sample.Common.TaskTypeStatus;
 import com.example.demo_sample.domain.TaskEntity;
 import com.example.demo_sample.domain.dto.CreateTaskDTO;
+import com.example.demo_sample.domain.dto.TaskTypeCountDTO;
 import com.example.demo_sample.domain.dto.UpdateTaskDTO;
 import com.example.demo_sample.repository.TaskRepository;
 import com.example.demo_sample.service.TaskService;
@@ -140,22 +141,17 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public ResponseEntity<?> countAllTypes() {
-        List<Object[]> rawResults = taskRepository.countTasksGroupByType();
-
-        List<Map<String, Object>> results = rawResults.stream()
-                .map(row -> {
-                    Integer typeId = ((Number) row[0]).intValue(); // ép an toàn
-                    Long count = ((Number) row[1]).longValue();
-
-                    Map<String, Object> map = new HashMap<>();
-                    map.put("typeId", typeId);
-                    map.put("typeName", TaskTypeStatus.getStatusName(typeId));
-                    map.put("count", count);
-                    return map;
-                })
+        List<TaskTypeCountDTO> results = taskRepository.countTasksGroupByType()
+                .stream()
+                .map(dto -> new TaskTypeCountDTO(
+                        dto.getTypeId(),
+                        TaskTypeStatus.getStatusName(dto.getTypeId()), // set lại typeName
+                        dto.getCount()
+                ))
                 .toList();
 
         return ResponseEntity.ok(results);
     }
+
 
 }
