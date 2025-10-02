@@ -44,7 +44,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // 2) Giải mã token lấy username
+        // 2) Giải mã token lấy username, nếu hết hạn sẽ trả về lỗi
         try {
             username = jwtUtil.extractUsername(jwt);
         } catch (Exception e) {
@@ -77,6 +77,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+//Json truyền sai sẽ hiện lỗi
     private void sendError(HttpServletResponse response, String message) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
         response.setContentType("application/json");

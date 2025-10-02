@@ -24,9 +24,9 @@ public class JwtUtil {
     public String generateAccessToken(String username) {
         return Jwts.builder()
                 .setSubject(username)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXP_MS))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .setIssuedAt(new Date()) //Tgian tạo token
+                .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXP_MS)) //Tgian hết hạn
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256) //gán token
                 .compact();
     }
 

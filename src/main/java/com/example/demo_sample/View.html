@@ -251,6 +251,7 @@
             body: JSON.stringify({ email, password })
         });
         const data = await res.json();
+        //JS lưu tk vào và sau này tự động dùng
         if (res.ok) {
             // fix: đọc token và email đúng
             accessToken = data.data.accessToken;

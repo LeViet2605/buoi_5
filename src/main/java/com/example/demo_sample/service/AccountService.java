@@ -64,8 +64,8 @@ public class AccountService implements UserDetailsService {
 
     // --- Login ---
     public ResponseEntity<?> login(String email, String password) {
-        var optAcc = accountRepository.findByEmail(email);
-        if (optAcc.isEmpty())
+        var acc = accountRepository.findByEmail(email);
+        if (acc.isEmpty())
             return ApiResponse.error(CommonErrorCode.ACCOUNT_NOT_FOUND, 404);
 
         if (loginAttemptService.isBlocked(email))
@@ -82,7 +82,7 @@ public class AccountService implements UserDetailsService {
             String accessToken = jwtUtil.generateAccessToken(email);
             String refreshToken = jwtUtil.generateRefreshToken(email);
 
-            AccountEntity account = optAcc.get();
+            AccountEntity account = acc.get();
 
             // ✅ Dùng LinkedHashMap để giữ thứ tự key
             Map<String, Object> responseData = new LinkedHashMap<>();
