@@ -37,13 +37,14 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+//    Xác thực
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
     }
 
 
-    // Xử lý khi chưa xác thực (401)
+    // Xử lý khi chưa đăng nhập hoặc sai token (401)
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint() {
         return (request, response, authException) -> {
@@ -67,10 +68,12 @@ public class SecurityConfig {
         };
     }
 
+
+//    Cấu hình
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.disable())   //tắt bởi vì dùng api rest. chỉ khi dùng login và sesion mớiá bật
                 .cors(cors -> cors.configurationSource(request -> {
                     var corsConfig = new org.springframework.web.cors.CorsConfiguration();
                     corsConfig.addAllowedOriginPattern("*"); // ✅ cho tất cả FE gọi BE
@@ -80,7 +83,7 @@ public class SecurityConfig {
                     return corsConfig;
                 }))
 
-                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // bắt buộc phải có token
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/account/register", "/api/account/login").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/account/**").hasRole("ADMIN")
@@ -90,11 +93,11 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-                .exceptionHandling(ex -> ex
+                .exceptionHandling(ex -> ex //lỗi
                         .authenticationEntryPoint(authenticationEntryPoint())
                         .accessDeniedHandler(accessDeniedHandler())
                 )
-                .formLogin(form -> form.disable());
+                .formLogin(form -> form.disable()); //REST API không dùng form HTML → cần disable để tránh Spring Security can thiệp.
 
         return http.build();
     }

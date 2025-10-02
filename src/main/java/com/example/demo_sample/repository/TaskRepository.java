@@ -20,7 +20,7 @@ public interface TaskRepository extends JpaRepository<TaskEntity, Integer>, JpaS
            """)
     TaskEntity getByRequirementName(String requirementName);
 
-    // Đếm số task theo từng taskTypeId (native SQL)
+    // Đếm số task theo từng taskTypeId
     @Query("SELECT new com.example.demo_sample.domain.dto.TaskTypeCountDTO(t.taskTypeId, '', COUNT(t)) " +
             "FROM TaskEntity t GROUP BY t.taskTypeId")
     List<TaskTypeCountDTO> countTasksGroupByType();

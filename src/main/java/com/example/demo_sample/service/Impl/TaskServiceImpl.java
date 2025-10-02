@@ -32,6 +32,7 @@ public class TaskServiceImpl implements TaskService {
         this.taskRepository = taskRepository;
     }
 
+//    Tìm task theo id
     @Override
     public ResponseEntity<?> getById(Integer id) {
         TaskEntity task = taskRepository.findById(id).orElse(null);
@@ -43,6 +44,7 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public ResponseEntity<?> create(CreateTaskDTO data) {
+        //check các giá trị ko dc null. bắt buộc phải nhập
         Map<String, String> errorMap = data.validate();
         if (!errorMap.isEmpty()) {
             return ResponseEntity.badRequest().body(errorMap);
@@ -89,6 +91,7 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public ResponseEntity<?> delete(Integer id, Authentication authentication) {
+        //Ktra token
         if (authentication == null) {
             return ApiResponse.error(CommonErrorCode.UNAUTHORIZED, 401);
         }
