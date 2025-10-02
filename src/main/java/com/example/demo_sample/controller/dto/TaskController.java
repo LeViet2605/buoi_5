@@ -1,9 +1,11 @@
 package com.example.demo_sample.controller.dto;
 
+import com.example.demo_sample.domain.TaskEntity;
 import com.example.demo_sample.domain.dto.CreateTaskDTO;
 import com.example.demo_sample.domain.dto.UpdateTaskDTO;
 import com.example.demo_sample.service.TaskService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -50,8 +52,11 @@ public class TaskController {
             @RequestParam(required = false) String requirementName,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "5") int size) {
-        return taskService.search(id, taskTypeId, requirementName, PageRequest.of(page, size));
+
+        return taskService.search(id, requirementName, PageRequest.of(page, size));
     }
+
+
 
     @GetMapping("/count-all")
     public ResponseEntity<?> countAllTypes() {

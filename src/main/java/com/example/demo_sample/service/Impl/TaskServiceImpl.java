@@ -119,28 +119,29 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public ResponseEntity<?> search(Integer id, Integer taskTypeId, String requirementName, Pageable pageable) {
-        Page<TaskEntity> tasks = taskRepository.findAll((root, query, cb) -> {
-            var predicates = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
+    public ResponseEntity<?> search(Integer id, String requirementName, Pageable pageable) {
+        Page<TaskEntity> tasks; // biến chứa kết quả
 
-            if (id != null) {
-                predicates.add(cb.equal(root.get("taskId"), id));
-            }
-            if (taskTypeId != null) {
-                predicates.add(cb.equal(root.get("taskTypeId"), taskTypeId));
-            }
-            if (requirementName != null && !requirementName.isBlank()) {
-                predicates.add(cb.like(cb.lower(root.get("requirementName")), "%" + requirementName.toLowerCase() + "%"));
-            }
+        if (id != null && requirementName != null) {
+            tasks = taskRepository.findByTaskIdAndRequirementNameContainingIgnoreCase(
+                    id, requirementName, pageable);
+        } else if (id != null) {
+            tasks = taskRepository.findByTaskId(id, pageable);
+        } else if (requirementName != null) {
+            tasks = taskRepository.findByRequirementNameContainingIgnoreCase(requirementName, pageable);
+        } else {
+            tasks = taskRepository.findAll(pageable);
+        }
 
-            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
-        }, pageable);
-
+        // kiểm tra rỗng
         if (tasks.isEmpty()) {
             return ApiResponse.error(CommonErrorCode.TASKS_NOT_FOUND, 404);
         }
+
         return ResponseEntity.ok(tasks);
     }
+
+
 
     @Override
     public ResponseEntity<?> countAllTypes() {
