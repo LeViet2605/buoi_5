@@ -6,6 +6,8 @@ import org.springframework.http.ResponseEntity;
 import java.util.HashMap;
 import java.util.Map;
 
+
+
 public class ApiResponse {
 
     public static ResponseEntity<?> success(CommonErrorCode code, Object data) {
