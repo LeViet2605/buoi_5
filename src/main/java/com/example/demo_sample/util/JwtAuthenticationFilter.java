@@ -1,6 +1,5 @@
 package com.example.demo_sample.util;
 
-import com.example.demo_sample.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

@@ -4,7 +4,7 @@ import com.example.demo_sample.Common.ApiResponse;
 import com.example.demo_sample.Common.CommonErrorCode;
 import com.example.demo_sample.domain.AccountEntity;
 import com.example.demo_sample.repository.AccountRepository;
-import com.example.demo_sample.JwtUtil;
+import com.example.demo_sample.util.JwtUtil;
 import com.example.demo_sample.util.LoginAttemptService;
 import com.example.demo_sample.util.TokenBlacklist;
 import jakarta.annotation.PostConstruct;

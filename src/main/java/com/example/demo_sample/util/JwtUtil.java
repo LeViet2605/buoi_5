@@ -1,4 +1,4 @@
-package com.example.demo_sample;
+package com.example.demo_sample.util;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
