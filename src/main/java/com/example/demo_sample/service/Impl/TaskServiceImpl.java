@@ -16,8 +16,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -58,6 +63,21 @@ public class TaskServiceImpl implements TaskService {
         newTaskEntity.setPlanTo(data.getPlanTo());
         newTaskEntity.setAssignee(data.getAssignee());
         newTaskEntity.setReviewer(data.getReviewer());
+
+        MultipartFile file = data.getFile(); // file trong DTO
+        if (file != null && !file.isEmpty()) {
+            String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
+            Path filePath = Paths.get("uploads/" + fileName); // lưu vào folder uploads
+            try {
+                Files.createDirectories(filePath.getParent());
+                file.transferTo(filePath.toFile());
+                newTaskEntity.setFilePath(filePath.toString()); // lưu đường dẫn vào DB
+            } catch (IOException e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Lỗi khi lưu file: " + e.getMessage());
+            }
+        }
+
 
         TaskEntity created = taskRepository.save(newTaskEntity);
 

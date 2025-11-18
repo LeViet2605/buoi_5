@@ -10,6 +10,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/tasks")
@@ -24,7 +25,9 @@ public class TaskController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createTask(@RequestBody CreateTaskDTO task) {
+    public ResponseEntity<?> createTask(@RequestBody CreateTaskDTO task,
+                                        @RequestPart(value = "file", required = false) MultipartFile file) {
+        task.setFile(file);
         return taskService.create(task);
     }
 

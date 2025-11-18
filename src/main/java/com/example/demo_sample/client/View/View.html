@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Task Manager FE</title>
+    <link rel="stylesheet" href="View.css">
+</head>
+<body>
+<div class="container">
+    <h1 style="text-align:center; color:white; margin-bottom:20px;">Task Manager</h1>
+
+    <!-- ===== Auth Screen ===== -->
+    <div id="authScreen" class="card">
+        <h2>Đăng ký</h2>
+        <form id="registerForm">
+            <input type="email" id="registerEmail" placeholder="Email" required>
+            <input type="password" id="registerPassword" placeholder="Mật khẩu" required>
+            <button type="submit">Đăng ký</button>
+        </form>
+
+        <h2 style="margin-top:20px;">Đăng nhập</h2>
+        <form id="loginForm">
+            <input type="email" id="loginEmail" placeholder="Email" required>
+            <input type="password" id="loginPassword" placeholder="Mật khẩu" required>
+            <button type="submit">Đăng nhập</button>
+        </form>
+    </div>
+
+    <!-- ===== Main Screen ===== -->
+    <div id="mainScreen" class="hidden">
+        <div class="header">
+            <div class="tab-btns">
+                <button id="taskTabBtn" class="active">Quản lý Task</button>
+                <button id="userTabBtn" class="hidden">Quản lý User</button>
+            </div>
+            <button id="logoutBtn" class="secondary-btn">Đăng xuất</button>
+        </div>
+
+        <!-- Task Management Tab -->
+        <div id="taskTab">
+            <div class="card">
+                <form id="taskForm">
+                    <h3 id="taskFormTitle">Tạo Task</h3>
+                    <input type="hidden" id="taskId">
+                    <input type="text" id="requirementName" placeholder="Requirement Name" required>
+                    <input type="text" id="assignee" placeholder="Assignee" required>
+                    <input type="text" id="reviewer" placeholder="Reviewer" required>
+                    <input type="number" id="taskTypeId" placeholder="TaskTypeId (1-4)" required>
+                    <input type="date" id="date" required>
+                    <input type="number" step="0.5" id="planFrom" placeholder="Plan From" required>
+                    <input type="number" step="0.5" id="planTo" placeholder="Plan To" required>
+                    <button type="submit">Lưu Task</button>
+                    <button type="button" id="cancelEditBtn" class="secondary-btn hidden">Hủy</button>
+                </form>
+            </div>
+
+            <!-- 🔎 Search Task -->
+            <div class="card">
+                <h3>Tìm kiếm Task</h3>
+                <form id="searchForm">
+                    <input type="text" id="searchKeyword" placeholder="Nhập Task ID hoặc Requirement Name">
+                    <button type="submit">Tìm kiếm</button>
+                </form>
+                <div id="searchResult" style="margin-top:15px;"></div>
+            </div>
+
+            <div class="card">
+                <h3>Danh sách Task</h3>
+                <div class="task-list" id="taskList"></div>
+                <div class="pagination" id="pagination"></div>
+            </div>
+
+            <!-- NEW: Count All Tasks -->
+            <div class="card">
+                <h3>Thống kê Task theo Type</h3>
+                <button id="countAllBtn">Count All Status</button>
+                <div id="countAllResult" style="margin-top: 15px; white-space: pre-line;"></div>
+            </div>
+        </div>
+
+        <!-- User Management Tab -->
+        <div id="userTab" class="hidden">
+            <div class="card">
+                <h3>Danh sách User</h3>
+                <div class="user-list" id="userList"></div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

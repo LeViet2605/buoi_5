@@ -3,6 +3,7 @@ package com.example.demo_sample.domain.dto;
 import com.example.demo_sample.Common.TaskTypeStatus;
 import lombok.Data;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -18,6 +19,7 @@ public class CreateTaskDTO {
     private LocalDate date;
     private Double planFrom;
     private Double planTo;
+    private MultipartFile file;
 
     public Map<String, String> validate() {
         Map<String, String> errors = new HashMap<>();
@@ -54,6 +56,10 @@ public class CreateTaskDTO {
             if (planFrom < 8.0 || planTo > 17.5 || planFrom >= planTo) {
                 errors.put("time", "Thời gian phải nằm trong khoảng [8.0 - 17.5] và planFrom < planTo");
             }
+        }
+
+        if (file != null && file.isEmpty()) {
+            errors.put("file", "File không được để trống nếu có gửi file");
         }
 
         return errors;

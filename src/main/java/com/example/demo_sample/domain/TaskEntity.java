@@ -42,6 +42,9 @@ public class TaskEntity {
     @Column(name = "reviewer")
     private String reviewer;
 
+    @Column(name = "file_path")
+    private String filePath;
+
     @Column(name = "created_at")
     @Setter(value = AccessLevel.NONE)
     private LocalDateTime createdAt = LocalDateTime.now();
