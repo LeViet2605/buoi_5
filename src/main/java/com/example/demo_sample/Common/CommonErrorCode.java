@@ -33,7 +33,14 @@ public enum CommonErrorCode {
     CREATE_TASK_SUCCESS("MSG_006", "Tạo task thành công"),
     UPDATE_TASK_SUCCESS("MSG_007", "Update task thành công"),
     DELETE_TASK_SUCCESS("MSG_008", "Xóa Task thành công"),
-    ALL_ACCOUNT("MSG_009", "Tất cả các account");
+    ALL_ACCOUNT("MSG_009", "Tất cả các account"),
+
+
+    //File Errors
+    FILE_NOT_FOUND("FILE_001", "File không tồn tại"),
+    DELETE_FILE_SUCCESS("FILE_002", "Xóa File thành công"),
+    FILE_EXISTS("FILE_003", "File đã tồn tại");
+
 
     private final String code;
     private final String message;
